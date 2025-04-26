@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
-import { Download, Headphones, Laptop, Play, Smartphone, Stop } from 'lucide-react';
+import { Download, Headphones, Laptop, Play, Smartphone, Square } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const LocalAISettings = () => {
@@ -149,7 +149,7 @@ export const LocalAISettings = () => {
                     variant="outline" 
                     onClick={() => handleUnload(model.name)}
                   >
-                    <Stop className="h-4 w-4 mr-1" />
+                    <Square className="h-4 w-4 mr-1" />
                     Unload
                   </Button>
                 )}

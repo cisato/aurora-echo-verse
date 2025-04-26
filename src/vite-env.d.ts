@@ -1,32 +1,21 @@
 
 /// <reference types="vite/client" />
 
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  maxAlternatives: number;
-  onaudioend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onaudiostart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
-  onnomatch: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
-  onsoundend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onsoundstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onspeechend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onspeechstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  abort(): void;
-  start(): void;
-  stop(): void;
+// PWA register module declaration
+declare module 'virtual:pwa-register' {
+  // Type definition for the registerSW function
+  export interface RegisterSWOptions {
+    immediate?: boolean;
+    onNeedRefresh?: () => void;
+    onOfflineReady?: () => void;
+    onRegistered?: (registration: ServiceWorkerRegistration | undefined) => void;
+    onRegisterError?: (error: any) => void;
+  }
+
+  export function registerSW(options?: RegisterSWOptions): (reloadPage?: boolean) => Promise<void>;
 }
 
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message: string;
-}
-
+// Speech Recognition API types
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
   results: SpeechRecognitionResultList;
@@ -39,10 +28,10 @@ interface SpeechRecognitionResultList {
 }
 
 interface SpeechRecognitionResult {
-  isFinal: boolean;
   length: number;
   item(index: number): SpeechRecognitionAlternative;
   [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
 }
 
 interface SpeechRecognitionAlternative {
@@ -50,60 +39,28 @@ interface SpeechRecognitionAlternative {
   confidence: number;
 }
 
-interface SpeechGrammar {
-  src: string;
-  weight: number;
-}
-
-interface SpeechGrammarList {
-  length: number;
-  item(index: number): SpeechGrammar;
-  [index: number]: SpeechGrammar;
-  addFromURI(src: string, weight?: number): void;
-  addFromString(string: string, weight?: number): void;
-}
-
-interface SpeechSynthesisUtterance extends EventTarget {
+interface SpeechRecognition extends EventTarget {
   lang: string;
-  onboundary: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null;
-  onend: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null;
-  onerror: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisErrorEvent) => any) | null;
-  onmark: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null;
-  onpause: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null;
-  onresume: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null;
-  onstart: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null;
-  pitch: number;
-  rate: number;
-  text: string;
-  voice: SpeechSynthesisVoice | null;
-  volume: number;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onerror: ((this: SpeechRecognition, ev: Event) => any) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
 }
 
-interface SpeechSynthesisEvent extends Event {
-  charIndex: number;
-  charLength?: number;
-  elapsedTime: number;
-  name?: string;
-  utterance: SpeechSynthesisUtterance;
+interface SpeechRecognitionConstructor {
+  new(): SpeechRecognition;
+  prototype: SpeechRecognition;
 }
 
-interface SpeechSynthesisErrorEvent extends SpeechSynthesisEvent {
-  error: string;
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
 }
-
-interface SpeechSynthesisVoice {
-  readonly default: boolean;
-  readonly lang: string;
-  readonly localService: boolean;
-  readonly name: string;
-  readonly voiceURI: string;
-}
-
-interface Window {
-  SpeechRecognition: new () => SpeechRecognition;
-  webkitSpeechRecognition: new () => SpeechRecognition;
-  SpeechGrammarList: new () => SpeechGrammarList;
-  webkitSpeechGrammarList: new () => SpeechGrammarList;
-  speechSynthesis: SpeechSynthesis;
-}
-
