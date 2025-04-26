@@ -41,8 +41,8 @@ export function ChatWindow() {
 
     // Initialize speech recognition if available
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
+      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognitionAPI();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
       
