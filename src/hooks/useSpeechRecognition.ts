@@ -6,12 +6,19 @@ interface UseSpeechRecognitionProps {
   onResult: (transcript: string) => void;
 }
 
+// Define SpeechRecognitionError interface to handle the error event
+interface SpeechRecognitionError extends Event {
+  error: string;
+}
+
 export const useSpeechRecognition = ({ onResult }: UseSpeechRecognitionProps) => {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    // Check if SpeechRecognition is available in the browser
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (SpeechRecognitionAPI) {
       recognitionRef.current = new SpeechRecognitionAPI();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
@@ -22,7 +29,9 @@ export const useSpeechRecognition = ({ onResult }: UseSpeechRecognitionProps) =>
       };
       
       recognitionRef.current.onerror = (event) => {
-        console.error("Speech recognition error", event.error);
+        // Cast event to SpeechRecognitionError to access the error property
+        const errorEvent = event as SpeechRecognitionError;
+        console.error("Speech recognition error", errorEvent.error);
         toast.error("Could not understand audio. Please try again.");
       };
     } else {

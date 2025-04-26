@@ -53,6 +53,10 @@ interface SpeechRecognition extends EventTarget {
   abort(): void;
 }
 
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
 interface SpeechRecognitionConstructor {
   new(): SpeechRecognition;
   prototype: SpeechRecognition;
