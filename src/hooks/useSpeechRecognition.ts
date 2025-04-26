@@ -16,7 +16,7 @@ export const useSpeechRecognition = ({ onResult }: UseSpeechRecognitionProps) =>
 
   useEffect(() => {
     // Check if SpeechRecognition is available in the browser
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
     if (SpeechRecognitionAPI) {
       recognitionRef.current = new SpeechRecognitionAPI();
@@ -48,6 +48,6 @@ export const useSpeechRecognition = ({ onResult }: UseSpeechRecognitionProps) =>
   return {
     start: () => recognitionRef.current?.start(),
     stop: () => recognitionRef.current?.stop(),
-    isSupported: Boolean(window.SpeechRecognition || window.webkitSpeechRecognition)
+    isSupported: Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
   };
 };
