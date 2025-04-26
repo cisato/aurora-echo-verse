@@ -107,6 +107,13 @@
   }
 }
 
+@layer utilities {
+  /* Add the missing bg-300% class */
+  .bg-300\% {
+    background-size: 300%;
+  }
+}
+
 .aurora-text {
   @apply bg-gradient-aurora bg-clip-text text-transparent bg-300% animate-gradient-shift;
 }
