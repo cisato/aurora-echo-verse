@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ChatMessageProps } from '@/components/ChatMessage';
 import { toast } from 'sonner';
@@ -19,9 +18,6 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
     
     setTimeout(() => {
       setMessages([initialGreeting]);
-      if (isVoiceEnabled) {
-        speakText(initialGreeting.message);
-      }
     }, 500);
   }, []);
 

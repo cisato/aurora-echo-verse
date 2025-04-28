@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ChatInput } from "./ChatInput";
 import { Messages } from "./chat/Messages";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -8,6 +8,9 @@ import { useChatState } from "@/hooks/useChatState";
 import { useVoiceControls } from "@/hooks/useVoiceControls";
 
 export function ChatWindow() {
+  // Flag to track if initial greeting has been spoken
+  const initialGreetingRef = useRef(false);
+  
   // Initialize hooks
   const { speak, cancel: cancelSpeech } = useSpeechSynthesis({
     onStart: () => setIsTalking(true),
@@ -50,6 +53,7 @@ export function ChatWindow() {
     setIsTalking,
     isTalking,
     isVoiceEnabled,
+    setIsVoiceEnabled,
     toggleRecording,
     toggleVoice
   } = useVoiceControls(startRecognition, stopRecognition, cancelSpeech);
@@ -69,14 +73,22 @@ export function ChatWindow() {
       if (savedSettings) {
         const { voiceEnabled } = JSON.parse(savedSettings);
         if (voiceEnabled !== undefined) {
-          // We don't need to call setIsVoiceEnabled directly here
-          // Instead we'll rely on the useVoiceControls hook's state
+          setIsVoiceEnabled(voiceEnabled);
         }
       }
     } catch (error) {
       console.error("Failed to load settings:", error);
     }
-  }, []);
+  }, [setIsVoiceEnabled]);
+
+  // Speak initial greeting only once
+  useEffect(() => {
+    if (!initialGreetingRef.current && messages.length > 0 && isVoiceEnabled) {
+      const greeting = "Hello! I'm Aurora, your AI assistant. How can I help you today?";
+      speakText(greeting);
+      initialGreetingRef.current = true; // Mark as spoken
+    }
+  }, [messages, isVoiceEnabled]);
 
   return (
     <div className="flex flex-col h-full">
