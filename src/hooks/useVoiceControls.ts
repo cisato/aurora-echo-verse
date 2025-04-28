@@ -54,6 +54,7 @@ export const useVoiceControls = (
     setIsTalking,
     isTalking,
     isVoiceEnabled,
+    setIsVoiceEnabled,
     toggleRecording,
     toggleVoice
   };

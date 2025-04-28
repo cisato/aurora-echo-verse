@@ -46,8 +46,8 @@ export const useSpeechRecognition = ({ onResult }: UseSpeechRecognitionProps) =>
   }, [onResult]);
 
   return {
-    start: () => recognitionRef.current?.start(),
-    stop: () => recognitionRef.current?.stop(),
+    startRecognition: () => recognitionRef.current?.start(),
+    stopRecognition: () => recognitionRef.current?.stop(),
     isSupported: Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
   };
 };

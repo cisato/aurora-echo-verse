@@ -68,7 +68,10 @@ export function ChatWindow() {
       const savedSettings = localStorage.getItem("settings");
       if (savedSettings) {
         const { voiceEnabled } = JSON.parse(savedSettings);
-        setIsVoiceEnabled(voiceEnabled);
+        if (voiceEnabled !== undefined) {
+          // We don't need to call setIsVoiceEnabled directly here
+          // Instead we'll rely on the useVoiceControls hook's state
+        }
       }
     } catch (error) {
       console.error("Failed to load settings:", error);
