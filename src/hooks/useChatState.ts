@@ -98,12 +98,29 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         console.error("Failed to load model settings:", error);
       }
       
-      // Check for special commands or information requests
+      // Process the user's message
       let responseText = "";
+      const lowerMessage = messageText.toLowerCase();
       
-      // Check if this is a model management command
-      if (messageText.toLowerCase().includes('download model') || 
-          messageText.toLowerCase().includes('get model')) {
+      // Check for math questions first (process these directly regardless of search settings)
+      const mathPattern = /what\s+is\s+\d+(\s*[\+\-\*\/]\s*\d+)+/i;
+      const calculatePattern = /calculate\s+\d+(\s*[\+\-\*\/]\s*\d+)+/i;
+      const equationPattern = /\d+(\s*[\+\-\*\/]\s*\d+)+\s*=\s*\?/i;
+      
+      if (mathPattern.test(lowerMessage) || calculatePattern.test(lowerMessage) || equationPattern.test(lowerMessage)) {
+        console.log("Processing math question");
+        responseText = generateResponse(messageText, currentPersona);
+      }
+      // Check for time/date questions
+      else if (lowerMessage.includes("what day is") || 
+               lowerMessage.includes("what is the date") || 
+               lowerMessage.includes("current time") ||
+               lowerMessage.includes("what time")) {
+        console.log("Processing time/date question");
+        responseText = generateResponse(messageText, currentPersona);
+      }
+      // Check for model management commands
+      else if (lowerMessage.includes('download model') || lowerMessage.includes('get model')) {
         
         const modelMatch = messageText.match(/model\s+(?:named|called)?\s+([a-zA-Z0-9-]+)/i);
         if (modelMatch && modelMatch[1]) {
@@ -149,9 +166,9 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         }
       }
       // Check if this is a load model command
-      else if (messageText.toLowerCase().includes('load model') || 
-               messageText.toLowerCase().includes('use model') || 
-               messageText.toLowerCase().includes('activate model')) {
+      else if (lowerMessage.includes('load model') || 
+               lowerMessage.includes('use model') || 
+               lowerMessage.includes('activate model')) {
         
         const modelMatch = messageText.match(/model\s+(?:named|called)?\s+([a-zA-Z0-9-]+)/i);
         if (modelMatch && modelMatch[1]) {
@@ -199,7 +216,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         }
       }
       // Check if this is a weather request
-      else if (messageText.toLowerCase().includes('weather')) {
+      else if (lowerMessage.includes('weather')) {
         const locationMatch = messageText.match(/weather\s+(?:in|for|at)?\s+([a-zA-Z\s]+)/i);
         const location = locationMatch ? locationMatch[1].trim() : 'current location';
         
@@ -211,9 +228,9 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         } else {
           responseText = `I'm sorry, I couldn't get the weather information for ${location}. Please check if you've provided a weather API key in settings.`;
         }
-      } 
+      }
       // Check if this is a news request
-      else if (messageText.toLowerCase().includes('news') || messageText.toLowerCase().includes('headlines')) {
+      else if (lowerMessage.includes('news') || lowerMessage.includes('headlines')) {
         const categoryMatch = messageText.match(/news\s+(?:about|on|regarding)?\s+([a-zA-Z\s]+)/i);
         const category = categoryMatch ? categoryMatch[1].trim() : 'general';
         
@@ -229,20 +246,28 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
           responseText = `I'm sorry, I couldn't fetch the latest news. Please check if you've provided a news API key in settings.`;
         }
       }
-      // Process web search if enabled and necessary
+      // Process web search for factual questions if enabled
       else if (webSearchEnabled && 
-              (messageText.toLowerCase().includes('search') || 
-               messageText.toLowerCase().includes('find') ||
-               messageText.toLowerCase().includes('look up'))) {
+              (lowerMessage.startsWith('what is') || 
+               lowerMessage.startsWith('who is') ||
+               lowerMessage.startsWith('where is') ||
+               lowerMessage.startsWith('when was') ||
+               lowerMessage.startsWith('how many') ||
+               lowerMessage.includes('search') || 
+               lowerMessage.includes('find') ||
+               lowerMessage.includes('look up'))) {
         
-        console.log("Performing web search");
+        console.log("Performing web search for factual question");
         const searchResults = await searchDuckDuckGo(messageText);
         
         if (searchResults && searchResults.length > 0) {
-          responseText = `Here are some search results that might help:\n\n`;
+          responseText = `Here's what I found about "${messageText}":\n\n`;
           searchResults.forEach((result, index) => {
-            responseText += `${index + 1}. ${result.title}\n${result.snippet}\n\n`;
+            if (index < 2) { // Limit to first 2 results for readability
+              responseText += `${result.title}\n${result.snippet}\n\n`;
+            }
           });
+          responseText += "This information comes from my web search capabilities.";
         } else {
           responseText = `I searched the web but couldn't find relevant information. Let me try to answer based on what I know.`;
           // Fall back to regular response generation
@@ -258,7 +283,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
           console.error("Local inference error:", inferenceError);
           responseText = `I encountered an error with the local model. ${generateResponse(messageText, currentPersona)}`;
         }
-      } 
+      }
       // Otherwise, use the default response generation
       else {
         responseText = generateResponse(messageText, currentPersona);
@@ -270,24 +295,24 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       }
       
       // If a persona change was requested, update it
-      if (messageText.toLowerCase().includes("switch to") || 
-          messageText.toLowerCase().includes("activate") ||
-          messageText.toLowerCase().includes("change to")) {
+      if (lowerMessage.includes("switch to") || 
+          lowerMessage.includes("activate") ||
+          lowerMessage.includes("change to")) {
         
-        if (messageText.toLowerCase().includes("teacher")) {
+        if (lowerMessage.includes("teacher")) {
           setCurrentPersona("teacher");
           // Save to localStorage
           updatePersonaInSettings("teacher");
-        } else if (messageText.toLowerCase().includes("friend")) {
+        } else if (lowerMessage.includes("friend")) {
           setCurrentPersona("friend");
           updatePersonaInSettings("friend");
-        } else if (messageText.toLowerCase().includes("professional")) {
+        } else if (lowerMessage.includes("professional")) {
           setCurrentPersona("professional");
           updatePersonaInSettings("professional");
-        } else if (messageText.toLowerCase().includes("creative")) {
+        } else if (lowerMessage.includes("creative")) {
           setCurrentPersona("creative");
           updatePersonaInSettings("creative");
-        } else if (messageText.toLowerCase().includes("scientist")) {
+        } else if (lowerMessage.includes("scientist")) {
           setCurrentPersona("scientist");
           updatePersonaInSettings("scientist");
         }
