@@ -23,6 +23,10 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
   const [error, setError] = useState<string | null>(null);
   const [voices, setVoices] = useState<ElevenLabsVoice[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const voiceCacheRef = useRef<Record<string, ArrayBuffer>>({});
+  
+  // Store API key in ref for easy access
+  const apiKeyRef = useRef<string | null>(null);
 
   // Create audio element for playback
   useEffect(() => {
@@ -37,19 +41,25 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
 
   // Get API key from localStorage if not provided
   const getApiKey = (): string | null => {
-    if (apiKey) return apiKey;
+    if (apiKey) {
+      apiKeyRef.current = apiKey;
+      return apiKey;
+    }
     
     try {
       const savedSettings = localStorage.getItem("settings");
       if (savedSettings) {
         const { elevenLabsApiKey } = JSON.parse(savedSettings);
-        return elevenLabsApiKey || null;
+        if (elevenLabsApiKey) {
+          apiKeyRef.current = elevenLabsApiKey;
+          return elevenLabsApiKey;
+        }
       }
     } catch (error) {
       console.error("Failed to get ElevenLabs API key from settings:", error);
     }
     
-    return null;
+    return apiKeyRef.current;
   };
 
   // Voice synthesis function
@@ -66,9 +76,17 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
     setIsLoading(true);
     setError(null);
     
+    // Check cache for frequently used phrases for the same voice
+    const cacheKey = `${options.voiceId}_${text}`;
+    if (voiceCacheRef.current[cacheKey]) {
+      console.log(`Using cached audio for voice ${options.voiceId}`);
+      setIsLoading(false);
+      return voiceCacheRef.current[cacheKey];
+    }
+    
     try {
       const voiceId = options.voiceId || "21m00Tcm4TlvDq8ikWAM"; // Default voice
-      const modelId = options.modelId || "eleven_monolingual_v1";
+      const modelId = options.modelId || "eleven_multilingual_v2";
       const stability = options.stability || 0.5;
       const similarityBoost = options.similarityBoost || 0.75;
       
@@ -98,7 +116,15 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
         throw new Error(`ElevenLabs API error (${response.status}): ${JSON.stringify(errorData)}`);
       }
 
-      return await response.arrayBuffer();
+      const audioBuffer = await response.arrayBuffer();
+      
+      // Cache common phrases
+      if (text.length < 100) {
+        voiceCacheRef.current[cacheKey] = audioBuffer;
+        console.log(`Cached audio for voice ${options.voiceId}`);
+      }
+      
+      return audioBuffer;
     } catch (error) {
       console.error("ElevenLabs synthesis error:", error);
       setError(error instanceof Error ? error.message : "Unknown error occurred");
@@ -173,13 +199,13 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
     }
   };
 
-  // Test voice function - actually synthesizes a small sample
+  // Test voice function - using shorter text for faster testing
   const testVoice = async (voiceId: string): Promise<boolean> => {
     console.log(`Testing voice ID: ${voiceId}`);
     try {
       setIsLoading(true);
       const audioData = await synthesizeSpeech(
-        "This is a voice test for ElevenLabs integration", 
+        "This is a voice test.", 
         { voiceId }
       );
       
@@ -198,12 +224,17 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
     }
   };
 
-  // Voice list retrieval function
-  const getVoices = async (): Promise<ElevenLabsVoice[]> => {
+  // Voice list retrieval function with caching
+  const getVoices = async (forceRefresh = false): Promise<ElevenLabsVoice[]> => {
     const apiKey = getApiKey();
     if (!apiKey) {
       setError("ElevenLabs API key is required");
       return [];
+    }
+
+    // Return cached voices if we have them and not forcing refresh
+    if (voices.length > 0 && !forceRefresh) {
+      return voices;
     }
 
     setIsLoading(true);
@@ -229,20 +260,54 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
       const retrievedVoices = data.voices || [];
       setVoices(retrievedVoices);
       
+      // Save to localStorage for quick access later
+      try {
+        localStorage.setItem('elevenlabs_voices', JSON.stringify(retrievedVoices));
+      } catch (error) {
+        console.error("Failed to cache voice list:", error);
+      }
+      
       return retrievedVoices;
     } catch (error) {
       console.error("Failed to get ElevenLabs voices:", error);
       setError(error instanceof Error ? error.message : "Unknown error occurred");
+      
+      // Try to load from cache if fetching failed
+      try {
+        const cachedVoices = localStorage.getItem('elevenlabs_voices');
+        if (cachedVoices) {
+          const parsed = JSON.parse(cachedVoices);
+          setVoices(parsed);
+          return parsed;
+        }
+      } catch (e) {
+        console.error("Failed to load cached voices:", e);
+      }
+      
       return [];
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Get default/recommended voices for new users
+  const getDefaultVoices = (): ElevenLabsVoice[] => {
+    return [
+      { voice_id: "9BWtsMINqrJLrRacOk9x", name: "Aria (Female)" },
+      { voice_id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger (Male)" },
+      { voice_id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah (Female)" },
+      { voice_id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura (Female)" },
+      { voice_id: "IKne3meq5aSn9XLyUdCD", name: "Charlie (Male)" },
+      { voice_id: "XB0fDUnXU5powFXDhCwa", name: "Charlotte (British Female)" },
+      { voice_id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily (Female)" }
+    ];
+  };
+
   return {
     speakText,
     testVoice,
     getVoices,
+    getDefaultVoices,
     voices,
     isLoading,
     error,

@@ -13,6 +13,52 @@ export const useSpeechSynthesis = ({ onStart, onEnd, useElevenLabs: useEleven = 
   const elevenLabs = useElevenLabs();
   const [isElevenLabsEnabled, setIsElevenLabsEnabled] = useState(useEleven);
   const [currentVoice, setCurrentVoice] = useState<string>("21m00Tcm4TlvDq8ikWAM");
+  
+  // Create an event listener to detect settings changes
+  const [settingsVersion, setSettingsVersion] = useState(0);
+
+  // Function to check for settings updates
+  const checkSettings = () => {
+    try {
+      const savedSettings = localStorage.getItem("settings");
+      if (savedSettings) {
+        const { elevenLabsEnabled, elevenLabsApiKey, elevenLabsVoiceId, voiceEnabled, selectedVoice } = JSON.parse(savedSettings);
+        
+        // Only enable ElevenLabs if we have an API key
+        const shouldEnable = Boolean(elevenLabsEnabled && elevenLabsApiKey);
+        setIsElevenLabsEnabled(shouldEnable);
+        
+        // Store the selected voice ID
+        if (elevenLabsVoiceId && elevenLabsVoiceId !== currentVoice) {
+          setCurrentVoice(elevenLabsVoiceId);
+          console.log(`Updated ElevenLabs voice ID from settings: ${elevenLabsVoiceId}`);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load speech settings:", error);
+    }
+  };
+
+  // Set up event listeners for settings changes
+  useEffect(() => {
+    // Listen for storage events to detect settings changes
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "settings") {
+        console.log("Settings changed, updating speech synthesis");
+        checkSettings();
+        setSettingsVersion(prev => prev + 1);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Initial settings check
+    checkSettings();
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (window.speechSynthesis) {
@@ -21,40 +67,27 @@ export const useSpeechSynthesis = ({ onStart, onEnd, useElevenLabs: useEleven = 
       console.warn("Speech synthesis not supported in this browser");
     }
 
-    try {
-      const savedSettings = localStorage.getItem("settings");
-      if (savedSettings) {
-        const { elevenLabsEnabled, elevenLabsApiKey, elevenLabsVoiceId } = JSON.parse(savedSettings);
-        
-        // Only enable ElevenLabs if we have an API key
-        const shouldEnable = Boolean(elevenLabsEnabled && elevenLabsApiKey);
-        setIsElevenLabsEnabled(shouldEnable);
-        
-        // Store the selected voice ID
-        if (elevenLabsVoiceId) {
-          setCurrentVoice(elevenLabsVoiceId);
-          console.log(`Loaded ElevenLabs voice ID from settings: ${elevenLabsVoiceId}`);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load ElevenLabs settings:", error);
-    }
+    // Check settings again
+    checkSettings();
 
     return () => {
       if (synthRef.current) {
         synthRef.current.cancel();
       }
     };
-  }, []);
+  }, [settingsVersion]);
 
   const speak = async (text: string, voiceSettings?: { voice?: string; rate?: number }) => {
+    // Re-check settings to ensure we have the latest
+    checkSettings();
+    
     if (isElevenLabsEnabled) {
       try {
         if (onStart) onStart();
         
         let voiceId = currentVoice;
         
-        // Check settings for voice ID
+        // Check settings for voice ID one last time to ensure most up-to-date
         try {
           const savedSettings = localStorage.getItem("settings");
           if (savedSettings) {
@@ -72,11 +105,11 @@ export const useSpeechSynthesis = ({ onStart, onEnd, useElevenLabs: useEleven = 
         if (voiceSettings?.voice) {
           // Map browser voices to ElevenLabs voices based on name
           if (voiceSettings.voice.includes("female") || voiceSettings.voice.includes("Aria")) {
-            voiceId = "21m00Tcm4TlvDq8ikWAM"; // Aria
+            voiceId = "9BWtsMINqrJLrRacOk9x"; // Aria
           } else if (voiceSettings.voice.includes("male") || voiceSettings.voice.includes("Guy")) {
-            voiceId = "SOYHLrjzK2X1ezoPC6cr"; // Adam
+            voiceId = "CwhRBWXzGAHq8TQ4Fs17"; // Roger
           } else if (voiceSettings.voice.includes("British") || voiceSettings.voice.includes("Ryan")) {
-            voiceId = "pNInz6obpgDQGcFmaJgB"; // Harry
+            voiceId = "pFZP5JQG7iQjIQuC4Bku"; // Lily
           }
         }
         
@@ -140,6 +173,7 @@ export const useSpeechSynthesis = ({ onStart, onEnd, useElevenLabs: useEleven = 
     cancel: () => synthRef.current?.cancel(),
     isSupported: Boolean(window.speechSynthesis || isElevenLabsEnabled),
     usingElevenLabs: isElevenLabsEnabled,
-    currentVoice
+    currentVoice,
+    refreshSettings: checkSettings
   };
 };

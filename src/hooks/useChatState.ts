@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChatMessageProps } from '@/components/ChatMessage';
 import { toast } from 'sonner';
 import { generateResponse, detectEmotion, getRelevantMemory, saveToMemory } from '@/utils/messageUtils';
@@ -49,6 +49,33 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       console.error("Failed to load persona setting:", error);
     }
   }, []);
+
+  // Handle processing a message with a local model
+  const processWithLocalModel = useCallback(async (modelName: string, text: string): Promise<string> => {
+    // Find the model
+    const model = models.find(m => m.name === modelName);
+    if (!model) {
+      throw new Error(`Model ${modelName} not found`);
+    }
+    
+    // If the model isn't downloaded, download it
+    if (!model.isDownloaded) {
+      toast.info(`Model ${modelName} needs to be downloaded first...`);
+      await downloadModel(modelName);
+      toast.success(`Model ${modelName} has been downloaded!`);
+    }
+    
+    // If the model isn't loaded, load it
+    if (!model.isLoaded) {
+      toast.info(`Loading model ${modelName}...`);
+      await loadModel(modelName);
+      toast.success(`Model ${modelName} is now loaded and active`);
+    }
+    
+    // Now run inference
+    console.log(`Using model ${modelName} for inference`);
+    return await runInference(text);
+  }, [models, downloadModel, loadModel, runInference]);
 
   const handleSendMessage = async (overrideText?: string) => {
     const messageText = overrideText || inputText;
@@ -119,7 +146,49 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         console.log("Processing time/date question");
         responseText = generateResponse(messageText, currentPersona);
       }
-      // Check for model management commands
+      // Check for model management commands - use a specific model command
+      else if (lowerMessage.includes('use model') || 
+               lowerMessage.includes('with model') ||
+               lowerMessage.includes('switch to model')) {
+        
+        const modelMatch = messageText.match(/model\s+(?:named|called)?\s+([a-zA-Z0-9-]+)/i);
+        if (modelMatch && modelMatch[1]) {
+          const modelName = modelMatch[1].trim();
+          const matchedModel = models.find(m => 
+            m.name.toLowerCase().includes(modelName.toLowerCase())
+          );
+          
+          if (matchedModel) {
+            try {
+              responseText = `I'll process your request using the ${matchedModel.name} model.`;
+              
+              // Extract the actual question from the command
+              const questionMatch = messageText.match(/(?:answer|process|respond to|about|tell me|answer me)(.+)/i);
+              let questionText = "Hello, how can I help you?";
+              
+              if (questionMatch && questionMatch[1]) {
+                questionText = questionMatch[1].trim();
+              } else {
+                responseText += " What would you like to know?";
+              }
+              
+              // If there's a question to answer, process it with the model
+              if (questionText !== "Hello, how can I help you?") {
+                const modelResponse = await processWithLocalModel(matchedModel.name, questionText);
+                responseText = `Using ${matchedModel.name}: ${modelResponse}`;
+              }
+            } catch (modelError) {
+              console.error("Model processing error:", modelError);
+              responseText = `I encountered an error using the ${matchedModel.name} model. ${modelError instanceof Error ? modelError.message : String(modelError)}`;
+            }
+          } else {
+            responseText = `I couldn't find a model matching '${modelName}'. Please check the available models in the Local AI settings.`;
+          }
+        } else {
+          responseText = "I can use specific AI models for you. Please specify which model you'd like to use by name.";
+        }
+      }
+      // Check for model management commands - download model
       else if (lowerMessage.includes('download model') || lowerMessage.includes('get model')) {
         
         const modelMatch = messageText.match(/model\s+(?:named|called)?\s+([a-zA-Z0-9-]+)/i);
@@ -137,22 +206,22 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
               
               try {
                 // Start download in background
-                downloadModel(matchedModel.name).then(success => {
-                  if (success) {
-                    const successMessage: ChatMessageProps = {
-                      message: `Successfully downloaded ${matchedModel.name}! Would you like me to load it now?`,
-                      sender: "bot",
-                      timestamp: new Date(),
-                      emotion: "happy"
-                    };
-                    setMessages(prev => [...prev, successMessage]);
-                    
-                    // Speak the success message if voice is enabled
-                    if (isVoiceEnabled) {
-                      speakText(successMessage.message);
-                    }
+                const downloadSuccess = await downloadModel(matchedModel.name);
+                
+                if (downloadSuccess) {
+                  const successMessage: ChatMessageProps = {
+                    message: `Successfully downloaded ${matchedModel.name}! Would you like me to load it now?`,
+                    sender: "bot",
+                    timestamp: new Date(),
+                    emotion: "happy"
+                  };
+                  setMessages(prev => [...prev, successMessage]);
+                  
+                  // Speak the success message if voice is enabled
+                  if (isVoiceEnabled) {
+                    speakText(successMessage.message);
                   }
-                });
+                }
               } catch (downloadError) {
                 console.error("Failed to download model:", downloadError);
                 responseText += " There was an issue starting the download. You can try again from the Local AI settings page.";
@@ -167,7 +236,6 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       }
       // Check if this is a load model command
       else if (lowerMessage.includes('load model') || 
-               lowerMessage.includes('use model') || 
                lowerMessage.includes('activate model')) {
         
         const modelMatch = messageText.match(/model\s+(?:named|called)?\s+([a-zA-Z0-9-]+)/i);
@@ -187,22 +255,22 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
               
               try {
                 // Start loading in background
-                loadModel(matchedModel.name).then(success => {
-                  if (success) {
-                    const successMessage: ChatMessageProps = {
-                      message: `Successfully loaded ${matchedModel.name}! You can now use it for local inference.`,
-                      sender: "bot",
-                      timestamp: new Date(),
-                      emotion: "happy"
-                    };
-                    setMessages(prev => [...prev, successMessage]);
-                    
-                    // Speak the success message if voice is enabled
-                    if (isVoiceEnabled) {
-                      speakText(successMessage.message);
-                    }
+                const loadSuccess = await loadModel(matchedModel.name);
+                
+                if (loadSuccess) {
+                  const successMessage: ChatMessageProps = {
+                    message: `Successfully loaded ${matchedModel.name}! You can now use it for local inference.`,
+                    sender: "bot",
+                    timestamp: new Date(),
+                    emotion: "happy"
+                  };
+                  setMessages(prev => [...prev, successMessage]);
+                  
+                  // Speak the success message if voice is enabled
+                  if (isVoiceEnabled) {
+                    speakText(successMessage.message);
                   }
-                });
+                }
               } catch (loadError) {
                 console.error("Failed to load model:", loadError);
                 responseText += " There was an issue loading the model. You can try again from the Local AI settings page.";
@@ -281,7 +349,19 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
           responseText = await runInference(messageText);
         } catch (inferenceError) {
           console.error("Local inference error:", inferenceError);
-          responseText = `I encountered an error with the local model. ${generateResponse(messageText, currentPersona)}`;
+          // If the active model failed, try to use any other loaded model
+          const anyLoadedModel = models.find(m => m.isLoaded && m.name !== activeModel);
+          if (anyLoadedModel) {
+            try {
+              console.log(`Falling back to local model: ${anyLoadedModel.name} for inference`);
+              responseText = await runInference(messageText);
+            } catch (fallbackError) {
+              console.error("Fallback inference error:", fallbackError);
+              responseText = `I encountered an error with the local models. ${generateResponse(messageText, currentPersona)}`;
+            }
+          } else {
+            responseText = `I encountered an error with the local model. ${generateResponse(messageText, currentPersona)}`;
+          }
         }
       }
       // Otherwise, use the default response generation

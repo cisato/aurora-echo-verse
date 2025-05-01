@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocalAI } from '@/hooks/useLocalAI';
 import { usePlatform } from '@/hooks/use-platform';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,20 @@ export const LocalAISettings = () => {
   
   // Track which models are currently being processed
   const [processingModels, setProcessingModels] = useState<Record<string, string>>({});
+  // Track which models have been tested
+  const [testedModels, setTestedModels] = useState<Record<string, boolean>>({});
+
+  // Load previously tested models from localStorage
+  useEffect(() => {
+    try {
+      const savedTestedModels = localStorage.getItem('aurora_tested_models');
+      if (savedTestedModels) {
+        setTestedModels(JSON.parse(savedTestedModels));
+      }
+    } catch (error) {
+      console.error("Failed to load tested models:", error);
+    }
+  }, []);
 
   const handleDownload = async (modelName: string) => {
     try {
@@ -58,20 +72,16 @@ export const LocalAISettings = () => {
       
       await loadModel(modelName);
       
-      toast.success(`Model loaded: ${modelName}`);
+      toast.success(`Model loaded: ${modelName} is now active`);
       setProcessingModels(prev => {
         const updated = { ...prev };
         delete updated[modelName];
         return updated;
       });
       
-      // Demo the model with a simple test
-      try {
-        toast.info(`Testing model: ${modelName}`, { duration: 1000 });
-        const result = await runInference("Hello, this is a test.");
-        toast.info(`Model test result: "${result.substring(0, 50)}${result.length > 50 ? '...' : ''}"`, { duration: 3000 });
-      } catch (testError) {
-        console.error("Model test failed:", testError);
+      // If model hasn't been tested yet, test it
+      if (!testedModels[modelName]) {
+        await handleTestModel(modelName, false);
       }
     } catch (error) {
       toast.error(`Failed to load model: ${error instanceof Error ? error.message : String(error)}`);
@@ -98,6 +108,63 @@ export const LocalAISettings = () => {
       });
     } catch (error) {
       toast.error(`Failed to unload model: ${error instanceof Error ? error.message : String(error)}`);
+      setProcessingModels(prev => {
+        const updated = { ...prev };
+        delete updated[modelName];
+        return updated;
+      });
+    }
+  };
+
+  // Function to test a model with a simple inference
+  const handleTestModel = async (modelName: string, showToast = true) => {
+    // Find model
+    const model = models.find(m => m.name === modelName);
+    if (!model || !model.isLoaded) {
+      if (showToast) {
+        toast.error("Model must be loaded before testing");
+      }
+      return;
+    }
+
+    try {
+      setProcessingModels(prev => ({ ...prev, [modelName]: 'testing' }));
+      if (showToast) {
+        toast.info(`Testing model: ${modelName}`);
+      }
+
+      let testPrompt = "";
+      switch (model.type) {
+        case 'text-generation':
+          testPrompt = "Briefly explain what makes you a good AI model.";
+          break;
+        case 'speech-recognition':
+          testPrompt = "This is a test transcription.";
+          break;
+        default:
+          testPrompt = "Test input for model.";
+      }
+
+      const result = await runInference(testPrompt);
+      
+      // Mark model as tested
+      const updatedTestedModels = { ...testedModels, [modelName]: true };
+      setTestedModels(updatedTestedModels);
+      
+      // Save to localStorage
+      localStorage.setItem('aurora_tested_models', JSON.stringify(updatedTestedModels));
+      
+      if (showToast) {
+        toast.success(`Model test successful: ${result.substring(0, 50)}${result.length > 50 ? '...' : ''}`);
+      } else {
+        toast.info(`Model test result: "${result.substring(0, 50)}${result.length > 50 ? '...' : ''}"`, { duration: 3000 });
+      }
+    } catch (error) {
+      console.error("Model test failed:", error);
+      if (showToast) {
+        toast.error(`Model test failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } finally {
       setProcessingModels(prev => {
         const updated = { ...prev };
         delete updated[modelName];
@@ -246,24 +313,44 @@ export const LocalAISettings = () => {
                       )}
                     </Button>
                   ) : model.isLoaded ? (
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleUnload(model.name)}
-                      disabled={Boolean(processingModels[model.name])}
-                    >
-                      {processingModels[model.name] === 'unloading' ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                          Unloading...
-                        </>
-                      ) : (
-                        <>
-                          <Square className="h-4 w-4 mr-1" />
-                          Unload
-                        </>
-                      )}
-                    </Button>
+                    <>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleUnload(model.name)}
+                        disabled={Boolean(processingModels[model.name])}
+                      >
+                        {processingModels[model.name] === 'unloading' ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            Unloading...
+                          </>
+                        ) : (
+                          <>
+                            <Square className="h-4 w-4 mr-1" />
+                            Unload
+                          </>
+                        )}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant={testedModels[model.name] ? "secondary" : "outline"}
+                        onClick={() => handleTestModel(model.name)}
+                        disabled={Boolean(processingModels[model.name])}
+                      >
+                        {processingModels[model.name] === 'testing' ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            Testing...
+                          </>
+                        ) : (
+                          <>
+                            <Headphones className="h-4 w-4 mr-1" />
+                            Test
+                          </>
+                        )}
+                      </Button>
+                    </>
                   ) : null}
                 </div>
               </div>

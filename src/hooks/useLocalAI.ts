@@ -47,7 +47,7 @@ export function useLocalAI() {
         if (hasLocalAISupport) {
           // Add appropriate models based on platform
           if (isCapacitor) {
-            // Native models for mobile devices
+            // Native models for mobile devices - more powerful models
             availableModels.push({
               name: 'Llama-3-8B-Instruct',
               type: 'text-generation',
@@ -66,6 +66,17 @@ export function useLocalAI() {
               isDownloaded: false,
               isLoaded: false,
               downloadUrl: 'https://huggingface.co/ggerganov/whisper.cpp'
+            });
+
+            // Add more powerful model 
+            availableModels.push({
+              name: 'Llama-3-70B-Instruct',
+              type: 'text-generation',
+              path: '/models/llama-3-70b-instruct-q4',
+              size: 35000, // MB - much larger
+              isDownloaded: false,
+              isLoaded: false,
+              downloadUrl: 'https://huggingface.co/meta-llama/Llama-3-70b-instruct'
             });
           }
           
@@ -99,36 +110,70 @@ export function useLocalAI() {
             isLoaded: false,
             downloadUrl: 'https://huggingface.co/microsoft/MiniLM-L6-H384-uncased'
           });
+
+          // Add more powerful models for all platforms
+          availableModels.push({
+            name: 'Phi-3-medium-4k-instruct',
+            type: 'text-generation',
+            path: '/models/phi-3-medium-4k-instruct-q4_0',
+            size: 3940, // MB
+            isDownloaded: false,
+            isLoaded: false,
+            downloadUrl: 'https://huggingface.co/microsoft/Phi-3-medium-4k-instruct-onnx'
+          });
+
+          availableModels.push({
+            name: 'Whisper-Base',
+            type: 'speech-recognition',
+            path: '/models/whisper-base',
+            size: 142, // MB
+            isDownloaded: false,
+            isLoaded: false,
+            downloadUrl: 'https://huggingface.co/ggerganov/whisper.cpp'
+          });
         }
         
-        // Check localStorage for previously downloaded models
+        // Check localStorage for previously downloaded and loaded models
         try {
           const savedModels = localStorage.getItem('aurora_local_models');
+          const savedActiveModel = localStorage.getItem('aurora_active_model');
+          
           if (savedModels) {
             const parsedModels = JSON.parse(savedModels);
-            // Update available models with download status
+            // Update available models with download and load status
             availableModels.forEach((model, index) => {
               const savedModel = parsedModels.find((m: ModelConfig) => m.name === model.name);
               if (savedModel) {
                 availableModels[index] = {
                   ...model,
                   isDownloaded: savedModel.isDownloaded,
-                  isLoaded: false // Always start with models unloaded
+                  isLoaded: savedModel.isLoaded // Preserve loaded state across sessions
                 };
               }
             });
           }
+          
+          // Set active model from localStorage if it exists
+          const activeModel = savedActiveModel || null;
+          
+          setLocalAIState({
+            isAvailable: hasLocalAISupport,
+            isLoading: false,
+            error: null,
+            models: availableModels,
+            activeModel
+          });
         } catch (error) {
           console.error("Failed to load saved model states:", error);
+          
+          setLocalAIState({
+            isAvailable: hasLocalAISupport,
+            isLoading: false,
+            error: null,
+            models: availableModels,
+            activeModel: null
+          });
         }
-        
-        setLocalAIState({
-          isAvailable: hasLocalAISupport,
-          isLoading: false,
-          error: null,
-          models: availableModels,
-          activeModel: null
-        });
       } catch (error) {
         console.error("Error checking for local AI availability:", error);
         setLocalAIState(prev => ({
@@ -149,6 +194,12 @@ export function useLocalAI() {
     if (modelIndex === -1) return false;
     
     const model = localAIState.models[modelIndex];
+    
+    // Check if model is already downloaded
+    if (model.isDownloaded) {
+      console.log(`Model ${model.name} is already downloaded`);
+      return true;
+    }
     
     // Update model with download started status
     setLocalAIState(prev => ({
@@ -223,21 +274,46 @@ export function useLocalAI() {
     if (modelIndex === -1) return false;
     const model = localAIState.models[modelIndex];
     
+    // Check if model is already loaded
+    if (model.isLoaded) {
+      console.log(`Model ${model.name} is already loaded`);
+      setLocalAIState(prev => ({
+        ...prev,
+        activeModel: modelName
+      }));
+      
+      // Save active model to localStorage
+      localStorage.setItem('aurora_active_model', modelName);
+      return true;
+    }
+    
     // Simulate loading time based on model size
     const loadTimeMs = Math.max(500, Math.min(3000, model.size));
     console.log(`Loading ${model.name} - Simulating ${loadTimeMs}ms load time`);
     
     return new Promise<boolean>((resolve) => {
       setTimeout(() => {
-        setLocalAIState(prev => ({
-          ...prev,
-          models: prev.models.map((m, idx) => 
+        setLocalAIState(prev => {
+          const updatedModels = prev.models.map((m, idx) => 
             idx === modelIndex 
               ? { ...m, isLoaded: true }
               : m
-          ),
-          activeModel: modelName
-        }));
+          );
+          
+          // Save loaded state to localStorage
+          try {
+            localStorage.setItem('aurora_local_models', JSON.stringify(updatedModels));
+            localStorage.setItem('aurora_active_model', modelName);
+          } catch (error) {
+            console.error("Failed to save model states:", error);
+          }
+          
+          return {
+            ...prev,
+            models: updatedModels,
+            activeModel: modelName
+          };
+        });
         
         resolve(true);
       }, loadTimeMs);
@@ -246,15 +322,30 @@ export function useLocalAI() {
   
   // Function to unload a model
   const unloadModel = async (modelName: string) => {
+    const updatedModels = localAIState.models.map(model => 
+      model.name === modelName 
+        ? { ...model, isLoaded: false }
+        : model
+    );
+    
+    // Update state
     setLocalAIState(prev => ({
       ...prev,
-      models: prev.models.map(model => 
-        model.name === modelName 
-          ? { ...model, isLoaded: false }
-          : model
-      ),
+      models: updatedModels,
       activeModel: prev.activeModel === modelName ? null : prev.activeModel
     }));
+    
+    // Update localStorage
+    try {
+      localStorage.setItem('aurora_local_models', JSON.stringify(updatedModels));
+      
+      // Remove active model from localStorage if it's the one being unloaded
+      if (localAIState.activeModel === modelName) {
+        localStorage.removeItem('aurora_active_model');
+      }
+    } catch (error) {
+      console.error("Failed to save model states:", error);
+    }
     
     return true;
   };
@@ -274,26 +365,44 @@ export function useLocalAI() {
     // Larger models should take longer but give better responses
     return new Promise((resolve) => {
       // Calculate processing time based on model size and prompt length
-      const baseTime = activeModel.size > 1000 ? 2000 : 1000;
-      const processingTime = baseTime + (prompt.length * 5);
+      const baseTime = activeModel.size > 1000 ? 1000 : 500;
+      const processingTime = baseTime + (prompt.length * 2);
       
       console.log(`Processing with ${activeModel.name} - Simulating ${processingTime}ms inference time`);
       
       setTimeout(() => {
-        // Generate a response based on model type and name
+        // Generate a response based on model type, size and name
         switch(activeModel.type) {
           case 'text-generation':
-            if (activeModel.name.includes('Llama') || activeModel.name.includes('Phi')) {
+            if (activeModel.name.includes('70B')) {
+              // Most sophisticated response for largest models
+              resolve(`I processed your question "${prompt}" using the high-capacity ${activeModel.name} model running locally on your device. 
+                As a powerful local AI model with 70B parameters, I can help with complex reasoning, code generation, and detailed explanations.
+                My responses are generated entirely on-device without internet access. What else would you like to know about this topic?`);
+            }
+            else if (activeModel.name.includes('Llama') || activeModel.name.includes('Phi-3-medium')) {
               // More sophisticated response for larger models
-              resolve(`I processed your question "${prompt}" using the ${activeModel.name} model running locally on your device. 
-                As a local AI model, I can help you with information based on my training data, though I don't have real-time internet access. 
+              resolve(`I processed your question "${prompt}" using the powerful ${activeModel.name} model running locally on your device. 
+                As a substantial local AI model, I can help you with detailed information based on my training data, though I don't have real-time internet access. 
                 What else would you like to know about this topic?`);
-            } else {
+            }
+            else if (activeModel.name.includes('Phi-3-mini')) {
+              // Standard response for mid-tier models
+              resolve(`I analyzed your query "${prompt}" using the ${activeModel.name} model running locally. This model is optimized for efficient on-device performance while maintaining good response quality. How can I assist further?`);
+            } 
+            else {
+              // Basic response for smallest models
               resolve(`Local response using ${activeModel.name}: I've analyzed your input "${prompt}" locally. How can I assist further with this?`);
             }
             break;
           case 'speech-recognition':
-            resolve(`Transcription result using ${activeModel.name}: "${prompt}"`);
+            if (activeModel.name.includes('Small')) {
+              resolve(`High-accuracy transcription using ${activeModel.name}: "${prompt}"`);
+            } else if (activeModel.name.includes('Base')) {
+              resolve(`Good-quality transcription using ${activeModel.name}: "${prompt}"`);
+            } else {
+              resolve(`Basic transcription using ${activeModel.name}: "${prompt}"`);
+            }
             break;
           default:
             resolve(`Processed with ${activeModel.name}: ${prompt}`);
