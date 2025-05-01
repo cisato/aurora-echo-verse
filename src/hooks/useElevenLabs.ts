@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface UseElevenLabsProps {
   apiKey?: string;
@@ -12,9 +12,28 @@ interface VoiceOptions {
   similarityBoost?: number;
 }
 
+export interface ElevenLabsVoice {
+  voice_id: string;
+  name: string;
+  preview_url?: string;
+}
+
 export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [voices, setVoices] = useState<ElevenLabsVoice[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Create audio element for playback
+  useEffect(() => {
+    audioRef.current = new Audio();
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    };
+  }, []);
 
   // Get API key from localStorage if not provided
   const getApiKey = (): string | null => {
@@ -33,6 +52,7 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
     return null;
   };
 
+  // Voice synthesis function
   const synthesizeSpeech = async (
     text: string, 
     options: VoiceOptions
@@ -51,6 +71,9 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
       const modelId = options.modelId || "eleven_monolingual_v1";
       const stability = options.stability || 0.5;
       const similarityBoost = options.similarityBoost || 0.75;
+      
+      // Log voice and model being used
+      console.log(`Using ElevenLabs voice ID: ${voiceId}, model: ${modelId}`);
       
       const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
       
@@ -85,26 +108,56 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
     }
   };
 
+  // Play audio from buffer
   const playAudio = async (audioData: ArrayBuffer): Promise<void> => {
-    const audioContext = new AudioContext();
-    try {
-      const audioBuffer = await audioContext.decodeAudioData(audioData);
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
-      source.start();
-      
-      return new Promise((resolve) => {
-        source.onended = () => {
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+    
+    // Create blob and URL
+    const blob = new Blob([audioData], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+    
+    return new Promise((resolve) => {
+      if (audioRef.current) {
+        audioRef.current.src = url;
+        audioRef.current.onended = () => {
+          URL.revokeObjectURL(url);
           resolve();
         };
-      });
-    } catch (error) {
-      console.error("Error playing audio:", error);
-      throw error;
-    }
+        audioRef.current.onerror = () => {
+          console.error("Error playing audio");
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        
+        audioRef.current.play().catch(err => {
+          console.error("Failed to play audio:", err);
+          resolve();
+        });
+      } else {
+        // Fallback to AudioContext if audio element is not available
+        const audioContext = new AudioContext();
+        audioContext.decodeAudioData(audioData, (audioBuffer) => {
+          const source = audioContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(audioContext.destination);
+          source.start();
+          
+          source.onended = () => {
+            resolve();
+          };
+        }, (err) => {
+          console.error("Error decoding audio data:", err);
+          resolve();
+        });
+      }
+    });
   };
 
+  // Speak text function
   const speakText = async (
     text: string, 
     options: VoiceOptions
@@ -120,13 +173,24 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
     }
   };
 
-  // Added functionality to test voice without playing (just checks if synthesis works)
+  // Test voice function - actually synthesizes a small sample
   const testVoice = async (voiceId: string): Promise<boolean> => {
+    console.log(`Testing voice ID: ${voiceId}`);
     try {
       setIsLoading(true);
-      const audioData = await synthesizeSpeech("This is a voice test", { voiceId });
+      const audioData = await synthesizeSpeech(
+        "This is a voice test for ElevenLabs integration", 
+        { voiceId }
+      );
+      
+      if (audioData) {
+        await playAudio(audioData);
+        setIsLoading(false);
+        return true;
+      }
+      
       setIsLoading(false);
-      return audioData !== null;
+      return false;
     } catch (error) {
       console.error("Voice test failed:", error);
       setIsLoading(false);
@@ -135,7 +199,7 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
   };
 
   // Voice list retrieval function
-  const getVoices = async (): Promise<any[]> => {
+  const getVoices = async (): Promise<ElevenLabsVoice[]> => {
     const apiKey = getApiKey();
     if (!apiKey) {
       setError("ElevenLabs API key is required");
@@ -146,6 +210,7 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
     setError(null);
     
     try {
+      console.log("Fetching ElevenLabs voices...");
       const response = await fetch("https://api.elevenlabs.io/v1/voices", {
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +223,13 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
       }
 
       const data = await response.json();
-      return data.voices || [];
+      console.log(`Retrieved ${data.voices?.length || 0} voices from ElevenLabs`);
+      
+      // Store voices in state
+      const retrievedVoices = data.voices || [];
+      setVoices(retrievedVoices);
+      
+      return retrievedVoices;
     } catch (error) {
       console.error("Failed to get ElevenLabs voices:", error);
       setError(error instanceof Error ? error.message : "Unknown error occurred");
@@ -172,6 +243,7 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
     speakText,
     testVoice,
     getVoices,
+    voices,
     isLoading,
     error,
   };

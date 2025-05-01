@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,6 +11,8 @@ import { Card } from "@/components/ui/card";
 import { LocalAISettings } from "@/components/LocalAISettings";
 import { usePlatform } from "@/hooks/use-platform";
 import { useElevenLabs } from "@/hooks/useElevenLabs";
+import { getWeatherData } from "@/utils/searchUtils";
+import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
 
 const Settings = () => {
   const [apiKey, setApiKey] = useState("");
@@ -27,11 +28,15 @@ const Settings = () => {
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState("");
   const [elevenLabsEnabled, setElevenLabsEnabled] = useState(false);
   const [elevenLabsVoiceId, setElevenLabsVoiceId] = useState("21m00Tcm4TlvDq8ikWAM");
+  const [availableVoices, setAvailableVoices] = useState<any[]>([]);
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
   
   // External API settings
   const [weatherApiKey, setWeatherApiKey] = useState("");
   const [newsApiKey, setNewsApiKey] = useState("");
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  const [isTestingWeather, setIsTestingWeather] = useState(false);
+  const [isTestingNews, setIsTestingNews] = useState(false);
   
   // Initialize ElevenLabs hook
   const elevenLabs = useElevenLabs({ apiKey: elevenLabsApiKey });
@@ -67,6 +72,23 @@ const Settings = () => {
     }
   }, []);
   
+  // Fetch available voices when API key is set
+  useEffect(() => {
+    const fetchVoices = async () => {
+      if (elevenLabsApiKey && elevenLabsEnabled) {
+        try {
+          const voices = await elevenLabs.getVoices();
+          setAvailableVoices(voices);
+          console.log(`Fetched ${voices.length} voices from ElevenLabs`);
+        } catch (error) {
+          console.error("Failed to fetch voices:", error);
+        }
+      }
+    };
+    
+    fetchVoices();
+  }, [elevenLabsApiKey, elevenLabsEnabled, elevenLabs]);
+  
   const handleSaveSettings = () => {
     // Save all settings to localStorage
     localStorage.setItem("settings", JSON.stringify({
@@ -95,19 +117,58 @@ const Settings = () => {
     }
     
     toast.info("Testing ElevenLabs voice...");
+    setIsTestingVoice(true);
+    
     try {
+      console.log(`Testing voice ID: ${elevenLabsVoiceId}`);
       const testSuccessful = await elevenLabs.testVoice(elevenLabsVoiceId);
+      
       if (testSuccessful) {
-        // If synthesis test is successful, try to speak
-        await elevenLabs.speakText("Hello, this is a test of the ElevenLabs voice integration.", { 
-          voiceId: elevenLabsVoiceId 
-        });
         toast.success("Voice test successful!");
       } else {
         toast.error("Voice test failed");
       }
     } catch (error) {
       toast.error(`Voice test error: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsTestingVoice(false);
+    }
+  };
+  
+  const handleTestWeatherAPI = async () => {
+    if (!weatherApiKey) {
+      toast.error("Weather API key is required");
+      return;
+    }
+    
+    setIsTestingWeather(true);
+    toast.info("Testing Weather API...");
+    
+    try {
+      // Temporarily store API key in localStorage to use the existing function
+      const currentSettings = localStorage.getItem("settings");
+      localStorage.setItem("settings", JSON.stringify({
+        ...JSON.parse(currentSettings || "{}"),
+        weatherApiKey
+      }));
+      
+      const weatherData = await getWeatherData("New York");
+      
+      if (weatherData) {
+        toast.success(`Weather API test successful! Current conditions in ${weatherData.location}: ${weatherData.condition}, ${weatherData.temperature}°C`);
+      } else {
+        toast.error("Weather API test failed. Please check your API key.");
+      }
+      
+      // Restore settings
+      if (currentSettings) {
+        localStorage.setItem("settings", currentSettings);
+      }
+    } catch (error) {
+      console.error("Weather API test error:", error);
+      toast.error("Weather API test failed. Please check your API key.");
+    } finally {
+      setIsTestingWeather(false);
     }
   };
 
@@ -125,6 +186,7 @@ const Settings = () => {
           <TabsTrigger value="apikeys">API Keys</TabsTrigger>
         </TabsList>
         
+        {/* General tab */}
         <TabsContent value="general">
           <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
             <h2 className="text-xl font-bold mb-4">AI Model Settings</h2>
@@ -193,6 +255,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
+        {/* Voice tab */}
         <TabsContent value="voice">
           <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
             <h2 className="text-xl font-bold mb-4">Voice Settings</h2>
@@ -250,6 +313,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
+        {/* ElevenLabs tab - improved with actual voice list */}
         <TabsContent value="elevenlabs">
           <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
             <h2 className="text-xl font-bold mb-4">ElevenLabs Voice Settings</h2>
@@ -293,31 +357,56 @@ const Settings = () => {
                   <SelectTrigger id="elevenLabsVoiceId">
                     <SelectValue placeholder="Select voice" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="21m00Tcm4TlvDq8ikWAM">Aria (Female)</SelectItem>
-                    <SelectItem value="9BWtsMINqrJLrRacOk9x">Roger (Male)</SelectItem>
-                    <SelectItem value="EXAVITQu4vr4xnSDxMaL">Sarah (Female)</SelectItem>
-                    <SelectItem value="FGY2WhTYpPnrIDTdsKH5">Laura (Female)</SelectItem>
-                    <SelectItem value="IKne3meq5aSn9XLyUdCD">Charlie (Male)</SelectItem>
-                    <SelectItem value="XB0fDUnXU5powFXDhCwa">Charlotte (British Female)</SelectItem>
+                  <SelectContent className="max-h-72">
+                    {availableVoices.length > 0 ? (
+                      availableVoices.map(voice => (
+                        <SelectItem key={voice.voice_id} value={voice.voice_id}>
+                          {voice.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <>
+                        <SelectItem value="21m00Tcm4TlvDq8ikWAM">Aria (Female)</SelectItem>
+                        <SelectItem value="SOYHLrjzK2X1ezoPC6cr">Adam (Male)</SelectItem>
+                        <SelectItem value="EXAVITQu4vr4xnSDxMaL">Sarah (Female)</SelectItem>
+                        <SelectItem value="FGY2WhTYpPnrIDTdsKH5">Laura (Female)</SelectItem>
+                        <SelectItem value="IKne3meq5aSn9XLyUdCD">Charlie (Male)</SelectItem>
+                        <SelectItem value="XB0fDUnXU5powFXDhCwa">Charlotte (British Female)</SelectItem>
+                        <SelectItem value="pNInz6obpgDQGcFmaJgB">Harry (British Male)</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
+                {elevenLabsEnabled && elevenLabsApiKey && availableVoices.length === 0 && !elevenLabs.isLoading && (
+                  <p className="text-xs text-amber-500 flex items-center gap-1">
+                    <Info className="h-3 w-3" />
+                    Click Save Settings and refresh to load available voices
+                  </p>
+                )}
               </div>
               
               <div className="grid gap-2">
                 <Button 
                   variant="outline" 
                   className="w-full" 
-                  disabled={!elevenLabsEnabled || !elevenLabsApiKey || elevenLabs.isLoading}
+                  disabled={!elevenLabsEnabled || !elevenLabsApiKey || isTestingVoice}
                   onClick={handleTestVoice}
                 >
-                  {elevenLabs.isLoading ? "Testing..." : "Test Voice"}
+                  {isTestingVoice ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    "Test Voice"
+                  )}
                 </Button>
               </div>
             </div>
           </Card>
         </TabsContent>
         
+        {/* LocalAI tab */}
         <TabsContent value="localai">
           <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
             <h2 className="text-xl font-bold mb-4">Local AI Models</h2>
@@ -325,6 +414,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
+        {/* Memory tab */}
         <TabsContent value="memory">
           <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
             <h2 className="text-xl font-bold mb-4">Memory & Privacy</h2>
@@ -358,6 +448,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
+        {/* API Keys tab - improved with test buttons */}
         <TabsContent value="apikeys">
           <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
             <h2 className="text-xl font-bold mb-4">External API Keys</h2>
@@ -375,6 +466,23 @@ const Settings = () => {
                 <p className="text-xs text-muted-foreground">
                   Used to get real weather data when requested
                 </p>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="mt-1"
+                  disabled={!weatherApiKey || isTestingWeather}
+                  onClick={handleTestWeatherAPI}
+                >
+                  {isTestingWeather ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    "Test Weather API"
+                  )}
+                </Button>
               </div>
               
               <div className="grid gap-2">
@@ -388,6 +496,16 @@ const Settings = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   Used to fetch current news headlines
+                </p>
+              </div>
+              
+              <div className="p-3 bg-primary/5 rounded-md mt-4">
+                <h3 className="font-medium flex items-center gap-1.5 mb-1">
+                  <Info className="h-4 w-4" />
+                  Web Search
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  DuckDuckGo search is available and doesn't require an API key. Enable it in the General tab.
                 </p>
               </div>
             </div>

@@ -16,7 +16,9 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
     isAvailable: isLocalAIAvailable, 
     activeModel, 
     models,
-    runInference
+    runInference,
+    loadModel,
+    downloadModel
   } = useLocalAI();
 
   // Load initial greeting
@@ -99,12 +101,111 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       // Check for special commands or information requests
       let responseText = "";
       
+      // Check if this is a model management command
+      if (messageText.toLowerCase().includes('download model') || 
+          messageText.toLowerCase().includes('get model')) {
+        
+        const modelMatch = messageText.match(/model\s+(?:named|called)?\s+([a-zA-Z0-9-]+)/i);
+        if (modelMatch && modelMatch[1]) {
+          const modelName = modelMatch[1].trim();
+          const matchedModel = models.find(m => 
+            m.name.toLowerCase().includes(modelName.toLowerCase())
+          );
+          
+          if (matchedModel) {
+            if (matchedModel.isDownloaded) {
+              responseText = `The model '${matchedModel.name}' is already downloaded. Would you like to load it?`;
+            } else {
+              responseText = `I'll download the ${matchedModel.name} model for you. This might take a moment...`;
+              
+              try {
+                // Start download in background
+                downloadModel(matchedModel.name).then(success => {
+                  if (success) {
+                    const successMessage: ChatMessageProps = {
+                      message: `Successfully downloaded ${matchedModel.name}! Would you like me to load it now?`,
+                      sender: "bot",
+                      timestamp: new Date(),
+                      emotion: "happy"
+                    };
+                    setMessages(prev => [...prev, successMessage]);
+                    
+                    // Speak the success message if voice is enabled
+                    if (isVoiceEnabled) {
+                      speakText(successMessage.message);
+                    }
+                  }
+                });
+              } catch (downloadError) {
+                console.error("Failed to download model:", downloadError);
+                responseText += " There was an issue starting the download. You can try again from the Local AI settings page.";
+              }
+            }
+          } else {
+            responseText = `I couldn't find a model matching '${modelName}'. Please check the available models in the Local AI settings.`;
+          }
+        } else {
+          responseText = "I can download AI models for you. Please specify which model you'd like to download.";
+        }
+      }
+      // Check if this is a load model command
+      else if (messageText.toLowerCase().includes('load model') || 
+               messageText.toLowerCase().includes('use model') || 
+               messageText.toLowerCase().includes('activate model')) {
+        
+        const modelMatch = messageText.match(/model\s+(?:named|called)?\s+([a-zA-Z0-9-]+)/i);
+        if (modelMatch && modelMatch[1]) {
+          const modelName = modelMatch[1].trim();
+          const matchedModel = models.find(m => 
+            m.name.toLowerCase().includes(modelName.toLowerCase())
+          );
+          
+          if (matchedModel) {
+            if (!matchedModel.isDownloaded) {
+              responseText = `The model '${matchedModel.name}' needs to be downloaded first. Would you like me to download it?`;
+            } else if (matchedModel.isLoaded) {
+              responseText = `The model '${matchedModel.name}' is already loaded and active.`;
+            } else {
+              responseText = `I'll load the ${matchedModel.name} model for you. This might take a moment...`;
+              
+              try {
+                // Start loading in background
+                loadModel(matchedModel.name).then(success => {
+                  if (success) {
+                    const successMessage: ChatMessageProps = {
+                      message: `Successfully loaded ${matchedModel.name}! You can now use it for local inference.`,
+                      sender: "bot",
+                      timestamp: new Date(),
+                      emotion: "happy"
+                    };
+                    setMessages(prev => [...prev, successMessage]);
+                    
+                    // Speak the success message if voice is enabled
+                    if (isVoiceEnabled) {
+                      speakText(successMessage.message);
+                    }
+                  }
+                });
+              } catch (loadError) {
+                console.error("Failed to load model:", loadError);
+                responseText += " There was an issue loading the model. You can try again from the Local AI settings page.";
+              }
+            }
+          } else {
+            responseText = `I couldn't find a model matching '${modelName}'. Please check the available models in the Local AI settings.`;
+          }
+        } else {
+          responseText = "I can load AI models for you. Please specify which model you'd like to load.";
+        }
+      }
       // Check if this is a weather request
-      if (messageText.toLowerCase().includes('weather')) {
+      else if (messageText.toLowerCase().includes('weather')) {
         const locationMatch = messageText.match(/weather\s+(?:in|for|at)?\s+([a-zA-Z\s]+)/i);
         const location = locationMatch ? locationMatch[1].trim() : 'current location';
         
+        console.log(`Getting weather for location: ${location}`);
         const weatherData = await getWeatherData(location);
+        
         if (weatherData) {
           responseText = `The current weather in ${weatherData.location} is ${weatherData.condition} with a temperature of ${weatherData.temperature}°C, ${weatherData.humidity}% humidity, and wind speed of ${weatherData.windSpeed} km/h.`;
         } else {
@@ -116,7 +217,9 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         const categoryMatch = messageText.match(/news\s+(?:about|on|regarding)?\s+([a-zA-Z\s]+)/i);
         const category = categoryMatch ? categoryMatch[1].trim() : 'general';
         
+        console.log(`Getting news for category: ${category}`);
         const headlines = await getNewsHeadlines(category);
+        
         if (headlines && headlines.length > 0) {
           responseText = `Here are some recent headlines:\n\n`;
           headlines.forEach((headline, index) => {
@@ -132,7 +235,9 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
                messageText.toLowerCase().includes('find') ||
                messageText.toLowerCase().includes('look up'))) {
         
+        console.log("Performing web search");
         const searchResults = await searchDuckDuckGo(messageText);
+        
         if (searchResults && searchResults.length > 0) {
           responseText = `Here are some search results that might help:\n\n`;
           searchResults.forEach((result, index) => {
@@ -147,10 +252,11 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       // Use local AI if available and appropriate
       else if (isLocalAIAvailable && activeModel && (offlineMode || modelToUse === "local")) {
         try {
+          console.log(`Using local model: ${activeModel} for inference`);
           responseText = await runInference(messageText);
         } catch (inferenceError) {
           console.error("Local inference error:", inferenceError);
-          responseText = generateResponse(messageText, currentPersona);
+          responseText = `I encountered an error with the local model. ${generateResponse(messageText, currentPersona)}`;
         }
       } 
       // Otherwise, use the default response generation
@@ -197,6 +303,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       setMessages(prev => [...prev, botMessage]);
       
       if (isVoiceEnabled) {
+        console.log("Speaking response with voice enabled");
         speakText(responseText);
       }
       

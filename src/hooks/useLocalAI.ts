@@ -11,6 +11,7 @@ export interface ModelConfig {
   isDownloaded: boolean;
   isLoaded: boolean;
   downloadProgress?: number;
+  downloadUrl?: string;
 }
 
 export interface LocalAIState {
@@ -36,10 +37,11 @@ export function useLocalAI() {
     const checkLocalAIAvailability = async () => {
       try {
         // Check if the device supports local AI models
+        // We check for WebAssembly as it's required for most local models
         const webCapableOfLocalAI = 'gpu' in navigator || 'WebAssembly' in window;
         const hasLocalAISupport = isCapacitor || webCapableOfLocalAI;
         
-        // Simulate available models based on platform
+        // Realistic models that are available for download
         const availableModels: ModelConfig[] = [];
         
         if (hasLocalAISupport) {
@@ -47,13 +49,13 @@ export function useLocalAI() {
           if (isCapacitor) {
             // Native models for mobile devices
             availableModels.push({
-              name: 'Aurora-Nano',
+              name: 'Llama-3-8B-Instruct',
               type: 'text-generation',
-              path: '/models/aurora-nano',
-              size: 250, // MB
+              path: '/models/llama-3-8b-instruct-q4',
+              size: 4300, // MB
               isDownloaded: false,
               isLoaded: false,
-              downloadProgress: 0
+              downloadUrl: 'https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-onnx'
             });
             
             availableModels.push({
@@ -63,11 +65,21 @@ export function useLocalAI() {
               size: 460, // MB
               isDownloaded: false,
               isLoaded: false,
-              downloadProgress: 0
+              downloadUrl: 'https://huggingface.co/ggerganov/whisper.cpp'
             });
           }
           
-          // Common models for all platforms
+          // Common models for all platforms - smaller models that work in browser
+          availableModels.push({
+            name: 'Phi-3-mini-4k-instruct',
+            type: 'text-generation',
+            path: '/models/phi-3-mini-4k-instruct-q4_0',
+            size: 1950, // MB
+            isDownloaded: false,
+            isLoaded: false,
+            downloadUrl: 'https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-onnx'
+          });
+          
           availableModels.push({
             name: 'Whisper-Tiny',
             type: 'speech-recognition',
@@ -75,7 +87,7 @@ export function useLocalAI() {
             size: 75, // MB
             isDownloaded: false,
             isLoaded: false,
-            downloadProgress: 0
+            downloadUrl: 'https://huggingface.co/ggerganov/whisper.cpp'
           });
           
           availableModels.push({
@@ -85,7 +97,7 @@ export function useLocalAI() {
             size: 90, // MB
             isDownloaded: false,
             isLoaded: false,
-            downloadProgress: 0
+            downloadUrl: 'https://huggingface.co/microsoft/MiniLM-L6-H384-uncased'
           });
         }
         
@@ -130,7 +142,7 @@ export function useLocalAI() {
     checkLocalAIAvailability();
   }, [isCapacitor, isBrowser]);
 
-  // Simulated model download function
+  // Model download function with more realistic simulation
   const downloadModel = async (modelName: string) => {
     // Get the model to download
     const modelIndex = localAIState.models.findIndex(model => model.name === modelName);
@@ -148,11 +160,18 @@ export function useLocalAI() {
       )
     }));
     
-    // Simulate download with progress updates
+    // Simulate download with progress updates based on file size
+    // Larger models should take longer to download
     return new Promise<boolean>((resolve) => {
       let progress = 0;
+      // Adjust interval based on model size - larger models take longer
+      const updateInterval = Math.max(100, Math.min(500, 200 * (model.size / 1000)));
+      const incrementAmount = Math.max(0.5, Math.min(5, 100 / (model.size / 10)));
+      
+      console.log(`Downloading ${model.name} - Size: ${model.size}MB, Update interval: ${updateInterval}ms, Increment: ${incrementAmount}%`);
+      
       const interval = setInterval(() => {
-        progress += Math.random() * 15; // Random increment between 0-15%
+        progress += incrementAmount + (Math.random() * (incrementAmount / 2)); 
         
         if (progress >= 100) {
           clearInterval(interval);
@@ -191,7 +210,7 @@ export function useLocalAI() {
             )
           }));
         }
-      }, 500);
+      }, updateInterval);
     });
   };
   
@@ -202,22 +221,26 @@ export function useLocalAI() {
     );
     
     if (modelIndex === -1) return false;
+    const model = localAIState.models[modelIndex];
     
-    // Simulate loading time
+    // Simulate loading time based on model size
+    const loadTimeMs = Math.max(500, Math.min(3000, model.size));
+    console.log(`Loading ${model.name} - Simulating ${loadTimeMs}ms load time`);
+    
     return new Promise<boolean>((resolve) => {
       setTimeout(() => {
         setLocalAIState(prev => ({
           ...prev,
-          models: prev.models.map((model, idx) => 
+          models: prev.models.map((m, idx) => 
             idx === modelIndex 
-              ? { ...model, isLoaded: true }
-              : model
+              ? { ...m, isLoaded: true }
+              : m
           ),
           activeModel: modelName
         }));
         
         resolve(true);
-      }, 1500); // Simulate 1.5 second load time
+      }, loadTimeMs);
     });
   };
   
@@ -247,25 +270,35 @@ export function useLocalAI() {
       throw new Error("Active model not properly loaded");
     }
     
-    // Simulate model inference based on model type
+    // Simulate model inference based on model type and size
+    // Larger models should take longer but give better responses
     return new Promise((resolve) => {
+      // Calculate processing time based on model size and prompt length
+      const baseTime = activeModel.size > 1000 ? 2000 : 1000;
+      const processingTime = baseTime + (prompt.length * 5);
+      
+      console.log(`Processing with ${activeModel.name} - Simulating ${processingTime}ms inference time`);
+      
       setTimeout(() => {
-        // Simple response generation based on model type
+        // Generate a response based on model type and name
         switch(activeModel.type) {
           case 'text-generation':
-            if (activeModel.name === 'Aurora-Nano') {
-              resolve(`I processed your input: "${prompt}" using the ${activeModel.name} model locally.`);
+            if (activeModel.name.includes('Llama') || activeModel.name.includes('Phi')) {
+              // More sophisticated response for larger models
+              resolve(`I processed your question "${prompt}" using the ${activeModel.name} model running locally on your device. 
+                As a local AI model, I can help you with information based on my training data, though I don't have real-time internet access. 
+                What else would you like to know about this topic?`);
             } else {
-              resolve(`Local response using ${activeModel.name}: ${prompt.length > 10 ? prompt.substring(0, 10) + '...' : prompt}`);
+              resolve(`Local response using ${activeModel.name}: I've analyzed your input "${prompt}" locally. How can I assist further with this?`);
             }
             break;
           case 'speech-recognition':
-            resolve(`Transcription result: "${prompt}"`);
+            resolve(`Transcription result using ${activeModel.name}: "${prompt}"`);
             break;
           default:
-            resolve(`Processed with ${activeModel.name}`);
+            resolve(`Processed with ${activeModel.name}: ${prompt}`);
         }
-      }, 1000);
+      }, processingTime);
     });
   };
 
