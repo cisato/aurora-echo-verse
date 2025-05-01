@@ -7,7 +7,7 @@ export interface ChatMessageProps {
   message: string;
   sender: "user" | "bot";
   timestamp: Date;
-  emotion?: "neutral" | "happy" | "sad" | "excited" | "thoughtful";
+  emotion?: "neutral" | "happy" | "sad" | "excited" | "thoughtful" | "urgent";
   isLoading?: boolean;
 }
 
