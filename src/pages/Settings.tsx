@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { LocalAISettings } from "@/components/LocalAISettings";
 import { usePlatform } from "@/hooks/use-platform";
+import { useElevenLabs } from "@/hooks/useElevenLabs";
 
 const Settings = () => {
   const [apiKey, setApiKey] = useState("");
@@ -22,10 +23,18 @@ const Settings = () => {
   const [saveMemory, setSaveMemory] = useState(true);
   const { isMobile, isDesktop } = usePlatform();
   
-  // Add ElevenLabs settings
+  // ElevenLabs settings
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState("");
   const [elevenLabsEnabled, setElevenLabsEnabled] = useState(false);
   const [elevenLabsVoiceId, setElevenLabsVoiceId] = useState("21m00Tcm4TlvDq8ikWAM");
+  
+  // External API settings
+  const [weatherApiKey, setWeatherApiKey] = useState("");
+  const [newsApiKey, setNewsApiKey] = useState("");
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  
+  // Initialize ElevenLabs hook
+  const elevenLabs = useElevenLabs({ apiKey: elevenLabsApiKey });
   
   // Load settings from localStorage on component mount
   useEffect(() => {
@@ -47,6 +56,11 @@ const Settings = () => {
         if (settings.elevenLabsApiKey) setElevenLabsApiKey(settings.elevenLabsApiKey);
         if (settings.elevenLabsEnabled !== undefined) setElevenLabsEnabled(settings.elevenLabsEnabled);
         if (settings.elevenLabsVoiceId) setElevenLabsVoiceId(settings.elevenLabsVoiceId);
+        
+        // Load external API settings
+        if (settings.weatherApiKey) setWeatherApiKey(settings.weatherApiKey);
+        if (settings.newsApiKey) setNewsApiKey(settings.newsApiKey);
+        if (settings.webSearchEnabled !== undefined) setWebSearchEnabled(settings.webSearchEnabled);
       }
     } catch (error) {
       console.error("Failed to load settings:", error);
@@ -54,7 +68,7 @@ const Settings = () => {
   }, []);
   
   const handleSaveSettings = () => {
-    // In a real app, this would save to localStorage or a database
+    // Save all settings to localStorage
     localStorage.setItem("settings", JSON.stringify({
       apiKey,
       voiceEnabled,
@@ -65,10 +79,36 @@ const Settings = () => {
       saveMemory,
       elevenLabsApiKey,
       elevenLabsEnabled,
-      elevenLabsVoiceId
+      elevenLabsVoiceId,
+      weatherApiKey,
+      newsApiKey,
+      webSearchEnabled
     }));
     
     toast.success("Settings saved successfully");
+  };
+  
+  const handleTestVoice = async () => {
+    if (!elevenLabsApiKey) {
+      toast.error("ElevenLabs API key is required");
+      return;
+    }
+    
+    toast.info("Testing ElevenLabs voice...");
+    try {
+      const testSuccessful = await elevenLabs.testVoice(elevenLabsVoiceId);
+      if (testSuccessful) {
+        // If synthesis test is successful, try to speak
+        await elevenLabs.speakText("Hello, this is a test of the ElevenLabs voice integration.", { 
+          voiceId: elevenLabsVoiceId 
+        });
+        toast.success("Voice test successful!");
+      } else {
+        toast.error("Voice test failed");
+      }
+    } catch (error) {
+      toast.error(`Voice test error: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   return (
@@ -76,12 +116,13 @@ const Settings = () => {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 flex-wrap">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="voice">Voice</TabsTrigger>
           <TabsTrigger value="elevenlabs">ElevenLabs</TabsTrigger>
           <TabsTrigger value="localai">Local AI</TabsTrigger>
           <TabsTrigger value="memory">Memory</TabsTrigger>
+          <TabsTrigger value="apikeys">API Keys</TabsTrigger>
         </TabsList>
         
         <TabsContent value="general">
@@ -132,6 +173,20 @@ const Settings = () => {
                   id="offlineMode" 
                   checked={offlineMode} 
                   onCheckedChange={setOfflineMode} 
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="webSearchEnabled">Enable Web Search</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Allow AI to search the web for information
+                  </p>
+                </div>
+                <Switch 
+                  id="webSearchEnabled" 
+                  checked={webSearchEnabled} 
+                  onCheckedChange={setWebSearchEnabled} 
                 />
               </div>
             </div>
@@ -233,7 +288,7 @@ const Settings = () => {
                 <Select 
                   value={elevenLabsVoiceId} 
                   onValueChange={setElevenLabsVoiceId} 
-                  disabled={!elevenLabsEnabled}
+                  disabled={!elevenLabsEnabled || !elevenLabsApiKey}
                 >
                   <SelectTrigger id="elevenLabsVoiceId">
                     <SelectValue placeholder="Select voice" />
@@ -253,13 +308,10 @@ const Settings = () => {
                 <Button 
                   variant="outline" 
                   className="w-full" 
-                  disabled={!elevenLabsEnabled || !elevenLabsApiKey}
-                  onClick={() => {
-                    toast.info("Testing ElevenLabs voice...");
-                    // In a real implementation, this would test the voice
-                  }}
+                  disabled={!elevenLabsEnabled || !elevenLabsApiKey || elevenLabs.isLoading}
+                  onClick={handleTestVoice}
                 >
-                  Test Voice
+                  {elevenLabs.isLoading ? "Testing..." : "Test Voice"}
                 </Button>
               </div>
             </div>
@@ -296,12 +348,48 @@ const Settings = () => {
                 variant="destructive" 
                 className="w-full"
                 onClick={() => {
-                  // In a real app, this would clear conversation history
+                  localStorage.removeItem('aurora_memories');
                   toast.success("Memory cleared successfully");
                 }}
               >
                 Clear All Memory
               </Button>
+            </div>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="apikeys">
+          <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
+            <h2 className="text-xl font-bold mb-4">External API Keys</h2>
+            
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="weatherApiKey">Weather API Key</Label>
+                <Input 
+                  id="weatherApiKey" 
+                  type="password" 
+                  value={weatherApiKey} 
+                  onChange={(e) => setWeatherApiKey(e.target.value)}
+                  placeholder="OpenWeatherMap API Key"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Used to get real weather data when requested
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="newsApiKey">News API Key</Label>
+                <Input 
+                  id="newsApiKey" 
+                  type="password" 
+                  value={newsApiKey} 
+                  onChange={(e) => setNewsApiKey(e.target.value)}
+                  placeholder="NewsAPI Key"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Used to fetch current news headlines
+                </p>
+              </div>
             </div>
           </Card>
         </TabsContent>

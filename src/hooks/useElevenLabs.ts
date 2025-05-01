@@ -71,7 +71,8 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
       });
 
       if (!response.ok) {
-        throw new Error(`ElevenLabs API error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`ElevenLabs API error (${response.status}): ${JSON.stringify(errorData)}`);
       }
 
       return await response.arrayBuffer();
@@ -119,8 +120,58 @@ export const useElevenLabs = ({ apiKey }: UseElevenLabsProps = {}) => {
     }
   };
 
+  // Added functionality to test voice without playing (just checks if synthesis works)
+  const testVoice = async (voiceId: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const audioData = await synthesizeSpeech("This is a voice test", { voiceId });
+      setIsLoading(false);
+      return audioData !== null;
+    } catch (error) {
+      console.error("Voice test failed:", error);
+      setIsLoading(false);
+      return false;
+    }
+  };
+
+  // Voice list retrieval function
+  const getVoices = async (): Promise<any[]> => {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      setError("ElevenLabs API key is required");
+      return [];
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+        headers: {
+          "Content-Type": "application/json",
+          "xi-api-key": apiKey,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`ElevenLabs API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.voices || [];
+    } catch (error) {
+      console.error("Failed to get ElevenLabs voices:", error);
+      setError(error instanceof Error ? error.message : "Unknown error occurred");
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     speakText,
+    testVoice,
+    getVoices,
     isLoading,
     error,
   };

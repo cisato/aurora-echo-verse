@@ -19,7 +19,8 @@ export const LocalAISettings = () => {
     activeModel,
     downloadModel,
     loadModel,
-    unloadModel
+    unloadModel,
+    runInference
   } = useLocalAI();
   
   const { isMobile, isDesktop, platformName } = usePlatform();
@@ -30,7 +31,7 @@ export const LocalAISettings = () => {
       await downloadModel(modelName);
       toast.success(`Model downloaded: ${modelName}`);
     } catch (error) {
-      toast.error(`Failed to download model: ${error}`);
+      toast.error(`Failed to download model: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -39,8 +40,16 @@ export const LocalAISettings = () => {
       toast.info(`Loading model: ${modelName}`);
       await loadModel(modelName);
       toast.success(`Model loaded: ${modelName}`);
+      
+      // Demo the model with a simple test
+      try {
+        const result = await runInference("Hello, this is a test.");
+        toast.info(`Model test result: ${result}`);
+      } catch (testError) {
+        console.error("Model test failed:", testError);
+      }
     } catch (error) {
-      toast.error(`Failed to load model: ${error}`);
+      toast.error(`Failed to load model: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -49,7 +58,7 @@ export const LocalAISettings = () => {
       await unloadModel(modelName);
       toast.success(`Model unloaded: ${modelName}`);
     } catch (error) {
-      toast.error(`Failed to unload model: ${error}`);
+      toast.error(`Failed to unload model: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -112,6 +121,13 @@ export const LocalAISettings = () => {
               Size: {model.size}MB
             </div>
             
+            {model.downloadProgress !== undefined && (
+              <div className="w-full my-2">
+                <Progress value={model.downloadProgress} className="h-2" />
+                <p className="text-xs text-center mt-1">{model.downloadProgress}%</p>
+              </div>
+            )}
+            
             <div className="flex items-center justify-between mt-4">
               <div className="flex items-center">
                 <Switch 
@@ -125,7 +141,7 @@ export const LocalAISettings = () => {
               </div>
               
               <div className="space-x-2">
-                {!model.isDownloaded ? (
+                {!model.isDownloaded && model.downloadProgress === undefined ? (
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -134,7 +150,7 @@ export const LocalAISettings = () => {
                     <Download className="h-4 w-4 mr-1" />
                     Download
                   </Button>
-                ) : !model.isLoaded ? (
+                ) : model.isDownloaded && !model.isLoaded ? (
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -143,7 +159,7 @@ export const LocalAISettings = () => {
                     <Play className="h-4 w-4 mr-1" />
                     Load
                   </Button>
-                ) : (
+                ) : model.isLoaded ? (
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -152,7 +168,7 @@ export const LocalAISettings = () => {
                     <Square className="h-4 w-4 mr-1" />
                     Unload
                   </Button>
-                )}
+                ) : null}
               </div>
             </div>
           </Card>
