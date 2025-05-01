@@ -8,10 +8,10 @@ import Settings from "@/pages/Settings";
 import { PersonaSelector } from "@/components/PersonaSelector";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useChatState } from "@/hooks/useChatState";
 
 const Index = () => {
   const [activeMode, setActiveMode] = useState("chat");
-  const [currentPersona, setCurrentPersona] = useState("assistant");
   const [showWelcome, setShowWelcome] = useState(true);
   
   useEffect(() => {
@@ -34,12 +34,6 @@ const Index = () => {
   const handleModeChange = (mode: string) => {
     setActiveMode(mode);
     localStorage.setItem("aurora_last_mode", mode);
-  };
-  
-  const handlePersonaChange = (persona: string) => {
-    setCurrentPersona(persona);
-    // In a full implementation, this would update the chat context
-    console.log(`Persona changed to: ${persona}`);
   };
 
   return (
@@ -64,7 +58,11 @@ const Index = () => {
         {activeMode === "chat" && (
           <>
             <div className="border-b p-2">
-              <PersonaSelector onSelectPersona={handlePersonaChange} />
+              <PersonaSelector onSelectPersona={(persona) => {
+                // The actual state change happens inside PersonaSelector 
+                // which stores the selection in localStorage
+                console.log(`Index: Persona changed to: ${persona}`);
+              }} />
             </div>
             <ChatWindow />
           </>

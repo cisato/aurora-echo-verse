@@ -63,7 +63,9 @@ export function ChatWindow() {
     inputText,
     setInputText,
     isLoading,
-    handleSendMessage
+    handleSendMessage,
+    currentPersona,
+    setPersona
   } = useChatState(isVoiceEnabled, speakText);
 
   // Load settings

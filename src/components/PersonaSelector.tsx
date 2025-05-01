@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Brain, 
@@ -7,7 +7,6 @@ import {
   GraduationCap, 
   Heart, 
   Lightbulb, 
-  School, 
   User 
 } from "lucide-react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -27,6 +26,21 @@ interface PersonaSelectorProps {
 
 export function PersonaSelector({ onSelectPersona }: PersonaSelectorProps) {
   const [activePersona, setActivePersona] = useState<string>("assistant");
+  
+  // Load saved persona on mount
+  useEffect(() => {
+    try {
+      const savedSettings = localStorage.getItem("settings");
+      if (savedSettings) {
+        const { activePersona } = JSON.parse(savedSettings);
+        if (activePersona) {
+          setActivePersona(activePersona);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load persona setting:", error);
+    }
+  }, []);
   
   const personas: PersonaOption[] = [
     {
@@ -76,6 +90,21 @@ export function PersonaSelector({ onSelectPersona }: PersonaSelectorProps) {
   const handlePersonaSelect = (persona: string) => {
     setActivePersona(persona);
     onSelectPersona(persona);
+    
+    // Save to settings
+    try {
+      const savedSettings = localStorage.getItem("settings");
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        settings.activePersona = persona;
+        localStorage.setItem("settings", JSON.stringify(settings));
+      } else {
+        localStorage.setItem("settings", JSON.stringify({ activePersona: persona }));
+      }
+    } catch (error) {
+      console.error("Failed to save persona setting:", error);
+    }
+    
     toast.success(`Switched to ${personas.find(p => p.id === persona)?.name} mode`);
   };
 
