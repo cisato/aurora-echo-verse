@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,37 @@ const Settings = () => {
   const [saveMemory, setSaveMemory] = useState(true);
   const { isMobile, isDesktop } = usePlatform();
   
+  // Add ElevenLabs settings
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState("");
+  const [elevenLabsEnabled, setElevenLabsEnabled] = useState(false);
+  const [elevenLabsVoiceId, setElevenLabsVoiceId] = useState("21m00Tcm4TlvDq8ikWAM");
+  
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    try {
+      const savedSettings = localStorage.getItem("settings");
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        
+        // Load existing settings
+        if (settings.apiKey) setApiKey(settings.apiKey);
+        if (settings.voiceEnabled !== undefined) setVoiceEnabled(settings.voiceEnabled);
+        if (settings.selectedVoice) setSelectedVoice(settings.selectedVoice);
+        if (settings.voiceRate) setVoiceRate(settings.voiceRate);
+        if (settings.modelPreference) setModelPreference(settings.modelPreference);
+        if (settings.offlineMode !== undefined) setOfflineMode(settings.offlineMode);
+        if (settings.saveMemory !== undefined) setSaveMemory(settings.saveMemory);
+        
+        // Load ElevenLabs settings
+        if (settings.elevenLabsApiKey) setElevenLabsApiKey(settings.elevenLabsApiKey);
+        if (settings.elevenLabsEnabled !== undefined) setElevenLabsEnabled(settings.elevenLabsEnabled);
+        if (settings.elevenLabsVoiceId) setElevenLabsVoiceId(settings.elevenLabsVoiceId);
+      }
+    } catch (error) {
+      console.error("Failed to load settings:", error);
+    }
+  }, []);
+  
   const handleSaveSettings = () => {
     // In a real app, this would save to localStorage or a database
     localStorage.setItem("settings", JSON.stringify({
@@ -31,7 +62,10 @@ const Settings = () => {
       voiceRate,
       modelPreference,
       offlineMode,
-      saveMemory
+      saveMemory,
+      elevenLabsApiKey,
+      elevenLabsEnabled,
+      elevenLabsVoiceId
     }));
     
     toast.success("Settings saved successfully");
@@ -45,6 +79,7 @@ const Settings = () => {
         <TabsList className="mb-4">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="voice">Voice</TabsTrigger>
+          <TabsTrigger value="elevenlabs">ElevenLabs</TabsTrigger>
           <TabsTrigger value="localai">Local AI</TabsTrigger>
           <TabsTrigger value="memory">Memory</TabsTrigger>
         </TabsList>
@@ -160,6 +195,77 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="elevenlabs">
+          <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
+            <h2 className="text-xl font-bold mb-4">ElevenLabs Voice Settings</h2>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="elevenLabsEnabled">Enable ElevenLabs</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Use ElevenLabs for high-quality text-to-speech
+                  </p>
+                </div>
+                <Switch 
+                  id="elevenLabsEnabled" 
+                  checked={elevenLabsEnabled} 
+                  onCheckedChange={setElevenLabsEnabled} 
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="elevenLabsApiKey">ElevenLabs API Key</Label>
+                <Input 
+                  id="elevenLabsApiKey" 
+                  type="password" 
+                  value={elevenLabsApiKey} 
+                  onChange={(e) => setElevenLabsApiKey(e.target.value)}
+                  placeholder="..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required to use ElevenLabs voices
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="elevenLabsVoiceId">Voice Selection</Label>
+                <Select 
+                  value={elevenLabsVoiceId} 
+                  onValueChange={setElevenLabsVoiceId} 
+                  disabled={!elevenLabsEnabled}
+                >
+                  <SelectTrigger id="elevenLabsVoiceId">
+                    <SelectValue placeholder="Select voice" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="21m00Tcm4TlvDq8ikWAM">Aria (Female)</SelectItem>
+                    <SelectItem value="9BWtsMINqrJLrRacOk9x">Roger (Male)</SelectItem>
+                    <SelectItem value="EXAVITQu4vr4xnSDxMaL">Sarah (Female)</SelectItem>
+                    <SelectItem value="FGY2WhTYpPnrIDTdsKH5">Laura (Female)</SelectItem>
+                    <SelectItem value="IKne3meq5aSn9XLyUdCD">Charlie (Male)</SelectItem>
+                    <SelectItem value="XB0fDUnXU5powFXDhCwa">Charlotte (British Female)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  disabled={!elevenLabsEnabled || !elevenLabsApiKey}
+                  onClick={() => {
+                    toast.info("Testing ElevenLabs voice...");
+                    // In a real implementation, this would test the voice
+                  }}
+                >
+                  Test Voice
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+        
         <TabsContent value="localai">
           <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
             <h2 className="text-xl font-bold mb-4">Local AI Models</h2>
