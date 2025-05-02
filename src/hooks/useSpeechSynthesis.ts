@@ -1,6 +1,6 @@
 
 import { useRef, useEffect, useState } from 'react';
-import { useElevenLabs } from './useElevenLabs';
+import { useElevenLabs as useElevenLabsHook } from './useElevenLabs';
 
 interface UseSpeechSynthesisProps {
   onStart?: () => void;
@@ -10,7 +10,7 @@ interface UseSpeechSynthesisProps {
 
 export const useSpeechSynthesis = ({ onStart, onEnd, useElevenLabs = false }: UseSpeechSynthesisProps = {}) => {
   const synthRef = useRef<SpeechSynthesis | null>(null);
-  const elevenLabs = useElevenLabs();
+  const elevenLabs = useElevenLabsHook();
   const [isElevenLabsEnabled, setIsElevenLabsEnabled] = useState(useElevenLabs);
   const [currentVoice, setCurrentVoice] = useState<string>("21m00Tcm4TlvDq8ikWAM");
   const [lastSettingsCheck, setLastSettingsCheck] = useState(Date.now());
