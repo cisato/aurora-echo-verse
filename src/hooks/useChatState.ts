@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChatMessageProps } from '@/components/ChatMessage';
 import { toast } from 'sonner';
 import { generateResponse, detectEmotion, getRelevantMemory, saveToMemory } from '@/utils/messageUtils';
@@ -10,6 +10,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentPersona, setCurrentPersona] = useState("assistant");
+  const conversationContext = useRef<string[]>([]);
   
   // Initialize local AI
   const { 
@@ -18,7 +19,8 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
     models,
     runInference,
     loadModel,
-    downloadModel
+    downloadModel,
+    getActiveModelForType
   } = useLocalAI();
 
   // Load initial greeting
@@ -72,10 +74,19 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       toast.success(`Model ${modelName} is now loaded and active`);
     }
     
-    // Now run inference
-    console.log(`Using model ${modelName} for inference`);
-    return await runInference(text);
-  }, [models, downloadModel, loadModel, runInference]);
+    // Now run inference with context
+    console.log(`Using model ${modelName} for inference with ${conversationContext.current.length} context items`);
+    
+    // Build context-enhanced prompt
+    let contextualPrompt = text;
+    if (conversationContext.current.length > 0) {
+      // Add the last few exchanges for context
+      const recentContext = conversationContext.current.slice(-4); // Last 4 exchanges
+      contextualPrompt = `${recentContext.join("\n")}\nUser: ${text}\nAI:`;
+    }
+    
+    return await runInference(contextualPrompt);
+  }, [models, downloadModel, loadModel, runInference, conversationContext]);
 
   const handleSendMessage = async (overrideText?: string) => {
     const messageText = overrideText || inputText;
@@ -92,6 +103,13 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
     setIsLoading(true);
     
     try {
+      // Update conversation context with user message
+      conversationContext.current.push(`User: ${messageText}`);
+      if (conversationContext.current.length > 10) {
+        // Keep only the last 10 exchanges to avoid context overflow
+        conversationContext.current = conversationContext.current.slice(-10);
+      }
+      
       // Save significant user messages to memory
       saveToMemory(messageText, true);
       
@@ -127,6 +145,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       
       // Process the user's message
       let responseText = "";
+      let usedLocalModel = false;
       const lowerMessage = messageText.toLowerCase();
       
       // Check for math questions first (process these directly regardless of search settings)
@@ -160,6 +179,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
           
           if (matchedModel) {
             try {
+              usedLocalModel = true;
               responseText = `I'll process your request using the ${matchedModel.name} model.`;
               
               // Extract the actual question from the command
@@ -175,7 +195,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
               // If there's a question to answer, process it with the model
               if (questionText !== "Hello, how can I help you?") {
                 const modelResponse = await processWithLocalModel(matchedModel.name, questionText);
-                responseText = `Using ${matchedModel.name}: ${modelResponse}`;
+                responseText = modelResponse;
               }
             } catch (modelError) {
               console.error("Model processing error:", modelError);
@@ -259,7 +279,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
                 
                 if (loadSuccess) {
                   const successMessage: ChatMessageProps = {
-                    message: `Successfully loaded ${matchedModel.name}! You can now use it for local inference.`,
+                    message: `Successfully loaded ${matchedModel.name}! You can now use it for inference by simply asking questions, or you can specifically request: "Use model ${matchedModel.name} to answer..."`,
                     sender: "bot",
                     timestamp: new Date(),
                     emotion: "happy"
@@ -292,9 +312,14 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         const weatherData = await getWeatherData(location);
         
         if (weatherData) {
-          responseText = `The current weather in ${weatherData.location} is ${weatherData.condition} with a temperature of ${weatherData.temperature}°C, ${weatherData.humidity}% humidity, and wind speed of ${weatherData.windSpeed} km/h.`;
+          // More conversational weather response
+          responseText = `The weather in ${weatherData.location} right now is ${weatherData.condition.toLowerCase()}. The temperature is ${weatherData.temperature}°C, with humidity at ${weatherData.humidity}% and wind speed of ${weatherData.windSpeed} km/h. ${
+            weatherData.temperature > 25 ? "It's quite warm today, so dress accordingly!" :
+            weatherData.temperature < 10 ? "It's on the colder side, so you might want to bundle up." :
+            "The temperature is quite pleasant today."
+          }`;
         } else {
-          responseText = `I'm sorry, I couldn't get the weather information for ${location}. Please check if you've provided a weather API key in settings.`;
+          responseText = `I'd love to tell you about the weather in ${location}, but I don't have access to real-time weather data at the moment. If you'd like accurate weather information, you might need to add a weather API key in the settings.`;
         }
       }
       // Check if this is a news request
@@ -306,12 +331,17 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         const headlines = await getNewsHeadlines(category);
         
         if (headlines && headlines.length > 0) {
-          responseText = `Here are some recent headlines:\n\n`;
+          // More conversational news response
+          responseText = `Here are some of the latest headlines I found about ${category}:\n\n`;
           headlines.forEach((headline, index) => {
-            responseText += `${index + 1}. ${headline.title} (${headline.source})\n`;
+            if (index < 3) { // Limit to first 3 headlines
+              responseText += `• ${headline.title} (${headline.source})\n`;
+            }
           });
+          
+          responseText += `\nWould you like me to tell you more about any of these stories?`;
         } else {
-          responseText = `I'm sorry, I couldn't fetch the latest news. Please check if you've provided a news API key in settings.`;
+          responseText = `I'd be happy to share the latest news about ${category}, but I don't have access to real-time news data at the moment. If you'd like current headlines, you might need to add a news API key in the settings.`;
         }
       }
       // Process web search for factual questions if enabled
@@ -329,55 +359,82 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         const searchResults = await searchDuckDuckGo(messageText);
         
         if (searchResults && searchResults.length > 0) {
-          responseText = `Here's what I found about "${messageText}":\n\n`;
+          // More conversational web search response
+          responseText = `I looked that up for you. Here's what I found about "${messageText}":\n\n`;
           searchResults.forEach((result, index) => {
             if (index < 2) { // Limit to first 2 results for readability
-              responseText += `${result.title}\n${result.snippet}\n\n`;
+              responseText += `From ${result.title}: ${result.snippet}\n\n`;
             }
           });
-          responseText += "This information comes from my web search capabilities.";
+          responseText += "Is there anything specific from these results you'd like me to explain further?";
         } else {
-          responseText = `I searched the web but couldn't find relevant information. Let me try to answer based on what I know.`;
+          responseText = `I tried searching the web but couldn't find relevant information about that. Let me try to answer based on what I already know.\n\n`;
           // Fall back to regular response generation
-          responseText += " " + generateResponse(messageText, currentPersona);
+          responseText += generateResponse(messageText, currentPersona);
         }
       }
       // Use local AI if available and appropriate
-      else if (isLocalAIAvailable && activeModel && (offlineMode || modelToUse === "local")) {
-        try {
-          console.log(`Using local model: ${activeModel} for inference`);
-          responseText = await runInference(messageText);
-        } catch (inferenceError) {
-          console.error("Local inference error:", inferenceError);
-          // If the active model failed, try to use any other loaded model
-          const anyLoadedModel = models.find(m => m.isLoaded && m.name !== activeModel);
+      else if (isLocalAIAvailable && (offlineMode || modelToUse === "local")) {
+        // First check if there's an active model already
+        if (activeModel) {
+          try {
+            console.log(`Using active model: ${activeModel} for inference`);
+            usedLocalModel = true;
+            responseText = await runInference(messageText);
+          } catch (inferenceError) {
+            console.error("Local inference error with active model:", inferenceError);
+            
+            // If the active model failed, try to use any other loaded model
+            const anyLoadedModel = models.find(m => m.isLoaded && m.name !== activeModel);
+            if (anyLoadedModel) {
+              try {
+                console.log(`Falling back to loaded model: ${anyLoadedModel.name}`);
+                usedLocalModel = true;
+                responseText = await runInference(messageText);
+              } catch (fallbackError) {
+                console.error("Fallback model error:", fallbackError);
+                responseText = generateResponse(messageText, currentPersona);
+              }
+            } else {
+              responseText = generateResponse(messageText, currentPersona);
+            }
+          }
+        } else {
+          // Check if any model is loaded
+          const anyLoadedModel = models.find(m => m.isLoaded);
           if (anyLoadedModel) {
             try {
-              console.log(`Falling back to local model: ${anyLoadedModel.name} for inference`);
-              responseText = await runInference(messageText);
-            } catch (fallbackError) {
-              console.error("Fallback inference error:", fallbackError);
-              responseText = `I encountered an error with the local models. ${generateResponse(messageText, currentPersona)}`;
+              console.log(`Using available loaded model: ${anyLoadedModel.name}`);
+              usedLocalModel = true;
+              responseText = await runInference(messageText, anyLoadedModel.name);
+            } catch (error) {
+              console.error("Local inference error:", error);
+              responseText = generateResponse(messageText, currentPersona);
             }
           } else {
-            responseText = `I encountered an error with the local model. ${generateResponse(messageText, currentPersona)}`;
+            // No loaded models, use default response generation
+            responseText = generateResponse(messageText, currentPersona);
           }
         }
-      }
+      } 
       // Otherwise, use the default response generation
       else {
         responseText = generateResponse(messageText, currentPersona);
       }
       
       // Add relevant memory as context if available
-      if (relevantMemory && !responseText.includes("I remember")) {
+      if (relevantMemory && !responseText.includes("I remember") && !usedLocalModel) {
         responseText = `I remember that ${relevantMemory}. ${responseText}`;
       }
       
+      // Update conversation context with AI response
+      conversationContext.current.push(`AI: ${responseText}`);
+      
       // If a persona change was requested, update it
-      if (lowerMessage.includes("switch to") || 
-          lowerMessage.includes("activate") ||
-          lowerMessage.includes("change to")) {
+      if ((lowerMessage.includes("switch to") || 
+           lowerMessage.includes("activate") ||
+           lowerMessage.includes("change to")) &&
+          !lowerMessage.includes("model")) {
         
         if (lowerMessage.includes("teacher")) {
           setCurrentPersona("teacher");
@@ -402,7 +459,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         message: responseText,
         sender: "bot",
         timestamp: new Date(),
-        emotion: detectEmotion(messageText)
+        emotion: detectEmotion(responseText)
       };
       
       setMessages(prev => [...prev, botMessage]);
@@ -413,7 +470,9 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       }
       
       // Save significant bot messages to memory
-      saveToMemory(responseText, false);
+      if (!usedLocalModel) {
+        saveToMemory(responseText, false);
+      }
       
     } catch (error) {
       console.error("Error processing message:", error);
@@ -442,6 +501,9 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
       } else {
         localStorage.setItem("settings", JSON.stringify({ activePersona: persona }));
       }
+      
+      // Dispatch event to trigger settings update in other components
+      window.dispatchEvent(new Event('storage'));
     } catch (error) {
       console.error("Failed to save persona setting:", error);
     }
@@ -459,6 +521,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
     isLoading,
     handleSendMessage,
     currentPersona,
-    setPersona
+    setPersona,
+    conversationContext: conversationContext.current
   };
 };
