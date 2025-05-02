@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ChatWindow } from "@/components/ChatWindow";
 import { Dashboard } from "@/components/Dashboard";
@@ -15,7 +14,15 @@ import { toast } from "sonner";
 const Index = () => {
   const [activeMode, setActiveMode] = useState("chat");
   const [showWelcome, setShowWelcome] = useState(true);
-  const { handleSendMessage } = useChatState(true); // Initialize chat state
+  
+  // Create a dummy speakText function for the useChatState hook
+  const dummySpeakText = (text: string) => {
+    console.log("Speaking text:", text);
+    // This is just a placeholder - the real speech functionality
+    // is handled in the ChatWindow component
+  };
+  
+  const { handleSendMessage } = useChatState(true, dummySpeakText); // Initialize chat state with both parameters
   
   useEffect(() => {
     // Check if this is the first visit
