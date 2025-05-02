@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { 
   Brain, 
@@ -9,7 +10,8 @@ import {
   Heart, 
   MessageCircle,
   Mic,
-  Search
+  Search,
+  Settings as SettingsIcon
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Progress } from "@/components/ui/progress";
@@ -31,15 +33,39 @@ export function Dashboard() {
 
   // Handler for quick actions
   const handleQuickAction = (action: string) => {
-    toast.success(`${action} action initiated`);
-    
-    // Navigate to chat page for most actions
-    navigate("/");
-    
-    // Dispatch custom event for parent component to handle
-    window.dispatchEvent(new CustomEvent('quickAction', { 
-      detail: { action }
-    }));
+    // Navigate to specific page or trigger action based on button name
+    switch(action) {
+      case "chat":
+        window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
+        break;
+      case "voice":
+        window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
+        break;
+      case "search":
+      case "weather":
+      case "code":
+      case "web":
+      case "joke":
+      case "help":
+      case "today":
+        // These actions navigate to chat and then send a specific message
+        window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
+        break;
+      case "settings":
+        navigate("/settings");
+        toast.success("Navigating to settings page");
+        break;
+      case "memory":
+        window.dispatchEvent(new CustomEvent('quickAction', { detail: { action: "memory" } }));
+        toast.success("Opening memory page");
+        break;
+      case "reminders":
+        window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
+        break;
+      default:
+        toast.info(`Action '${action}' not implemented yet`);
+        break;
+    }
   };
   
   return (
@@ -142,6 +168,8 @@ export function Dashboard() {
           { name: "Weather", icon: CloudSun, color: "bg-aurora-orange", action: "weather" },
           { name: "Code", icon: Code, color: "bg-aurora-green", action: "code" },
           { name: "Web", icon: Globe, color: "bg-aurora-cyan", action: "web" },
+          { name: "Memory", icon: Brain, color: "bg-aurora-purple", action: "memory" },
+          { name: "Settings", icon: SettingsIcon, color: "bg-gray-500", action: "settings" },
         ].map((item, i) => {
           const Icon = item.icon;
           return (

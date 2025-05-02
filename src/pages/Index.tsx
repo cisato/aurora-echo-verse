@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ChatWindow } from "@/components/ChatWindow";
 import { Dashboard } from "@/components/Dashboard";
@@ -91,6 +90,12 @@ const Index = () => {
         break;
       case "reminders":
         toast.info("Reminder view not implemented in demo");
+        break;
+      case "memory":
+        handleModeChange("memory");
+        break;
+      case "settings":
+        handleModeChange("settings");
         break;
       case "today":
         handleSendMessage("What's the date today?");
