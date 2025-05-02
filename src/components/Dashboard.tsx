@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { 
   Brain, 
@@ -16,9 +15,12 @@ import { useEffect, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { AuroraAvatar } from "./AuroraAvatar";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function Dashboard() {
   const [progress, setProgress] = useState(0);
+  const navigate = useNavigate();
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -26,6 +28,19 @@ export function Dashboard() {
     }, 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Handler for quick actions
+  const handleQuickAction = (action: string) => {
+    toast.success(`${action} action initiated`);
+    
+    // Navigate to chat page for most actions
+    navigate("/");
+    
+    // Dispatch custom event for parent component to handle
+    window.dispatchEvent(new CustomEvent('quickAction', { 
+      detail: { action }
+    }));
+  };
   
   return (
     <div className="p-6 overflow-auto">
@@ -121,12 +136,12 @@ export function Dashboard() {
       <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
         {[
-          { name: "Chat", icon: MessageCircle, color: "bg-aurora-blue" },
-          { name: "Voice", icon: Mic, color: "bg-aurora-pink" },
-          { name: "Search", icon: Search, color: "bg-aurora-purple" },
-          { name: "Weather", icon: CloudSun, color: "bg-aurora-orange" },
-          { name: "Code", icon: Code, color: "bg-aurora-green" },
-          { name: "Web", icon: Globe, color: "bg-aurora-cyan" },
+          { name: "Chat", icon: MessageCircle, color: "bg-aurora-blue", action: "chat" },
+          { name: "Voice", icon: Mic, color: "bg-aurora-pink", action: "voice" },
+          { name: "Search", icon: Search, color: "bg-aurora-purple", action: "search" },
+          { name: "Weather", icon: CloudSun, color: "bg-aurora-orange", action: "weather" },
+          { name: "Code", icon: Code, color: "bg-aurora-green", action: "code" },
+          { name: "Web", icon: Globe, color: "bg-aurora-cyan", action: "web" },
         ].map((item, i) => {
           const Icon = item.icon;
           return (
@@ -134,6 +149,7 @@ export function Dashboard() {
               key={i} 
               variant="outline" 
               className="flex-col h-24 border-none glass-panel hover:scale-105 transition-transform"
+              onClick={() => handleQuickAction(item.action)}
             >
               <div className={`p-2 rounded-full ${item.color}/20 mb-2`}>
                 <Icon className={`h-5 w-5 text-${item.color.replace('bg-', '')}`} />
@@ -215,7 +231,11 @@ export function Dashboard() {
             </div>
           </div>
           
-          <Button variant="outline" className="w-full mt-4 bg-background/30">
+          <Button 
+            variant="outline" 
+            className="w-full mt-4 bg-background/30"
+            onClick={() => handleQuickAction("reminders")}
+          >
             View All Reminders
           </Button>
         </Card>

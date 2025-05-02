@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ChatWindow } from "@/components/ChatWindow";
 import { Dashboard } from "@/components/Dashboard";
@@ -39,6 +40,18 @@ const Index = () => {
     if (lastMode) {
       setActiveMode(lastMode);
     }
+    
+    // Listen for quick action events from Dashboard
+    const handleQuickAction = (event: CustomEvent) => {
+      const { action } = event.detail;
+      handleActionRequest(action);
+    };
+    
+    window.addEventListener('quickAction', handleQuickAction as EventListener);
+    
+    return () => {
+      window.removeEventListener('quickAction', handleQuickAction as EventListener);
+    };
   }, []);
   
   const handleModeChange = (mode: string) => {
@@ -46,14 +59,41 @@ const Index = () => {
     localStorage.setItem("aurora_last_mode", mode);
   };
 
-  const handleQuickAction = (action: string) => {
+  const handleActionRequest = (action: string) => {
     switch(action) {
-      case "today":
-        handleSendMessage("What's the date today?");
+      case "chat":
+        handleModeChange("chat");
+        break;
+      case "voice":
+        handleModeChange("chat");
+        setTimeout(() => {
+          // Trigger voice button in chat window
+          document.querySelector('[aria-label="Toggle recording"]')?.dispatchEvent(
+            new MouseEvent('click', { bubbles: true })
+          );
+        }, 300);
+        break;
+      case "search":
+        handleSendMessage("I want to search something online");
         handleModeChange("chat");
         break;
       case "weather":
-        handleSendMessage("What's the weather like?");
+        handleSendMessage("What's the weather like today?");
+        handleModeChange("chat");
+        break;
+      case "code":
+        handleSendMessage("Can you help me with some code examples?");
+        handleModeChange("chat");
+        break;
+      case "web":
+        handleSendMessage("Can you search the web for recent news?");
+        handleModeChange("chat");
+        break;
+      case "reminders":
+        toast.info("Reminder view not implemented in demo");
+        break;
+      case "today":
+        handleSendMessage("What's the date today?");
         handleModeChange("chat");
         break;
       case "help":
@@ -68,7 +108,13 @@ const Index = () => {
         break;
     }
     
-    toast.success(`Quick action: ${action} activated`);
+    if (action !== "reminders") {
+      toast.success(`Quick action: ${action} activated`);
+    }
+  };
+
+  const handleQuickAction = (action: string) => {
+    handleActionRequest(action);
   };
 
   const dismissWelcome = () => {
