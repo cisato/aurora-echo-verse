@@ -1,4 +1,3 @@
-
 import { ChatMessageProps } from "@/components/ChatMessage";
 
 // Enhanced emotion detection with more nuanced understanding
@@ -41,6 +40,14 @@ export const detectEmotion = (input: string): ChatMessageProps["emotion"] => {
 // Improved topic detection for better context awareness
 export const detectTopic = (input: string): string => {
   const lowerInput = input.toLowerCase();
+  
+  // Check for personal queries about the user
+  if (lowerInput.includes("my name") || 
+      lowerInput.includes("who am i") ||
+      lowerInput.includes("what's my name") || 
+      lowerInput.includes("what is my name")) {
+    return "personal-identity";
+  }
   
   // Check for mathematical questions with more patterns
   if (/what\s+is\s+\d+(\s*[\+\-\*\/]\s*\d+)+/i.test(lowerInput) || 
@@ -174,6 +181,36 @@ const getDateTimeInfo = (query: string): string => {
   return `Right now it's ${now.toLocaleDateString()} at ${now.toLocaleTimeString()} in your local timezone.`;
 };
 
+// Get user name from memory if available
+const getUserName = (): string | null => {
+  try {
+    const userName = localStorage.getItem("aurora_user_name");
+    if (userName) return userName;
+    
+    // Try to find name in memories
+    const memories = localStorage.getItem("aurora_memories");
+    if (memories) {
+      const parsedMemories = JSON.parse(memories);
+      const nameMemory = parsedMemories.find((memory: any) => 
+        memory.type === "name" || 
+        (memory.content && memory.content.toLowerCase().includes("name is"))
+      );
+      
+      if (nameMemory) {
+        const nameMatch = nameMemory.content.match(/name is (\w+)/i);
+        if (nameMatch && nameMatch[1]) {
+          return nameMatch[1];
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error getting user name:", error);
+    return null;
+  }
+};
+
 // Enhanced response generation with persona support
 export const generateResponse = (input: string, persona: string = "assistant"): string => {
   const lowerInput = input.toLowerCase();
@@ -194,21 +231,61 @@ export const generateResponse = (input: string, persona: string = "assistant"): 
     }
   }
   
+  // Handle name queries
+  if (topic === "personal-identity") {
+    const userName = getUserName();
+    
+    if (userName) {
+      switch(persona) {
+        case "teacher":
+          return `Your name is ${userName}. I've made a note of it in my records. Is there something specific I can help you learn about today?`;
+        case "friend":
+          return `You're ${userName}, of course! How could I forget? What's on your mind today?`;
+        case "professional":
+          return `According to my records, your name is ${userName}. How may I assist you further today?`;
+        case "creative":
+          return `Ah, ${userName}! A name that carries its own creative energy. What creative endeavors are we exploring today?`;
+        case "scientist":
+          return `My records indicate your name is ${userName}. I've stored this data point for our future interactions. What scientific topic should we analyze today?`;
+        default:
+          return `Your name is ${userName}. I've saved that in my memory. How can I help you today?`;
+      }
+    } else {
+      switch(persona) {
+        case "teacher":
+          return "I don't believe you've told me your name yet. Would you like to introduce yourself so I can address you properly during our learning sessions?";
+        case "friend":
+          return "You know, I don't think you've told me your name yet! Want to introduce yourself so I know what to call you?";
+        case "professional":
+          return "I don't have a record of your name in my system. If you'd like to be addressed personally, please provide your preferred name.";
+        case "creative":
+          return "I haven't caught your name in our creative exchanges yet. Names carry such personality - I'd love to know yours!";
+        case "scientist":
+          return "I have no data point regarding your name in my memory banks. Would you care to provide this information for more personalized interaction?";
+        default:
+          return "I don't believe I know your name yet. Would you like to tell me so I can address you properly?";
+      }
+    }
+  }
+  
   // Basic greeting responses with more personality
   if (lowerInput.includes("hello") || lowerInput.includes("hi") || lowerInput.includes("hey")) {
+    const userName = getUserName();
+    const greeting = userName ? ` ${userName}` : '';
+    
     switch(persona) {
       case "teacher":
-        return "Hello there! Ready for today's learning journey? What topic has caught your interest that you'd like to explore together?";
+        return `Hello${greeting}! Ready for today's learning journey? What topic has caught your interest that you'd like to explore together?`;
       case "friend":
-        return "Hey! Great to hear from you! What's been happening in your world lately?";
+        return `Hey${greeting}! Great to hear from you! What's been happening in your world lately?`;
       case "professional":
-        return "Good day. I trust you're well. How may I best assist you with your professional needs today?";
+        return `Good day${greeting}. I trust you're well. How may I best assist you with your professional needs today?`;
       case "creative":
-        return "Hello creative mind! What wonderful ideas are percolating in that imagination of yours today?";
+        return `Hello${greeting} creative mind! What wonderful ideas are percolating in that imagination of yours today?`;
       case "scientist":
-        return "Greetings. I'm curious to know what hypothesis or scientific concept you're contemplating today.";
+        return `Greetings${greeting}. I'm curious to know what hypothesis or scientific concept you're contemplating today.`;
       default:
-        return "Hello there! It's good to connect with you. How can I brighten your day?";
+        return `Hello${greeting}! It's good to connect with you. How can I brighten your day?`;
     }
   }
   
