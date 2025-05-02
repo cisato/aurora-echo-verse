@@ -181,7 +181,7 @@ const getDateTimeInfo = (query: string): string => {
   return `Right now it's ${now.toLocaleDateString()} at ${now.toLocaleTimeString()} in your local timezone.`;
 };
 
-// Get user name from memory if available
+// Get user name from memory if available - improved for more natural responses
 const getUserName = (): string | null => {
   try {
     const userName = localStorage.getItem("aurora_user_name");
@@ -191,15 +191,29 @@ const getUserName = (): string | null => {
     const memories = localStorage.getItem("aurora_memories");
     if (memories) {
       const parsedMemories = JSON.parse(memories);
+      
+      // First look for explicit name memories
       const nameMemory = parsedMemories.find((memory: any) => 
-        memory.type === "name" || 
-        (memory.content && memory.content.toLowerCase().includes("name is"))
+        memory.type === "name"
       );
       
       if (nameMemory) {
         const nameMatch = nameMemory.content.match(/name is (\w+)/i);
         if (nameMatch && nameMatch[1]) {
           return nameMatch[1];
+        }
+      }
+      
+      // Then check all memories for name mentions
+      for (const memory of parsedMemories) {
+        if (memory.content) {
+          const nameMatch = memory.content.match(/my name is (\w+)/i) || 
+                           memory.content.match(/call me (\w+)/i) || 
+                           memory.content.match(/i am (\w+)/i);
+          
+          if (nameMatch && nameMatch[1]) {
+            return nameMatch[1];
+          }
         }
       }
     }
@@ -231,39 +245,39 @@ export const generateResponse = (input: string, persona: string = "assistant"): 
     }
   }
   
-  // Handle name queries
+  // Handle name queries with more natural responses
   if (topic === "personal-identity") {
     const userName = getUserName();
     
     if (userName) {
       switch(persona) {
         case "teacher":
-          return `Your name is ${userName}. I've made a note of it in my records. Is there something specific I can help you learn about today?`;
+          return `Your name is ${userName}. I've noted that in our previous conversations.`;
         case "friend":
-          return `You're ${userName}, of course! How could I forget? What's on your mind today?`;
+          return `You're ${userName}! We've been chatting for a bit now, so I remember your name.`;
         case "professional":
-          return `According to my records, your name is ${userName}. How may I assist you further today?`;
+          return `According to our previous conversation, your name is ${userName}.`;
         case "creative":
-          return `Ah, ${userName}! A name that carries its own creative energy. What creative endeavors are we exploring today?`;
+          return `You're ${userName}! A name I've come to associate with our creative conversations.`;
         case "scientist":
-          return `My records indicate your name is ${userName}. I've stored this data point for our future interactions. What scientific topic should we analyze today?`;
+          return `Based on our interaction history, you identified yourself as ${userName}.`;
         default:
-          return `Your name is ${userName}. I've saved that in my memory. How can I help you today?`;
+          return `Your name is ${userName}. I remember you told me that earlier.`;
       }
     } else {
       switch(persona) {
         case "teacher":
-          return "I don't believe you've told me your name yet. Would you like to introduce yourself so I can address you properly during our learning sessions?";
+          return "I don't believe you've told me your name yet. Would you like to introduce yourself?";
         case "friend":
-          return "You know, I don't think you've told me your name yet! Want to introduce yourself so I know what to call you?";
+          return "You know, I don't think you've told me your name yet! Want to introduce yourself?";
         case "professional":
-          return "I don't have a record of your name in my system. If you'd like to be addressed personally, please provide your preferred name.";
+          return "I don't have your name on record. Would you like to share it?";
         case "creative":
-          return "I haven't caught your name in our creative exchanges yet. Names carry such personality - I'd love to know yours!";
+          return "I don't believe we've had a proper introduction yet. What should I call you?";
         case "scientist":
-          return "I have no data point regarding your name in my memory banks. Would you care to provide this information for more personalized interaction?";
+          return "I don't have your name in my memory. Would you like to provide it?";
         default:
-          return "I don't believe I know your name yet. Would you like to tell me so I can address you properly?";
+          return "I don't believe I know your name yet. Would you like to tell me?";
       }
     }
   }
@@ -307,6 +321,27 @@ export const generateResponse = (input: string, persona: string = "assistant"): 
     }
   }
   
+  // Check for web search patterns
+  if (lowerInput.startsWith("what is") || 
+      lowerInput.startsWith("who is") ||
+      lowerInput.startsWith("where is") ||
+      lowerInput.startsWith("how to")) {
+    
+    // For web search related questions, provide a more natural response
+    // instead of the search-engine style answer
+    
+    switch(topic) {
+      case "factual":
+        return `That's an interesting question. Let me share what I know about that.`;
+      case "definition":
+        return `Let me explain what that means based on my knowledge.`;
+      case "general":
+        return `I'll try to answer that as best as I can based on my training.`;
+      default:
+        // Continue with other topic handling
+    }
+  }
+  
   // Topic-based responses with enhanced factual question handling
   switch(topic) {
     case "math":
@@ -319,32 +354,16 @@ export const generateResponse = (input: string, persona: string = "assistant"): 
       return getDateTimeInfo(lowerInput);
     
     case "factual":
-      // For factual questions, we'll use web search if available
-      return `That's an interesting question. To give you the most accurate answer, I'd need to search for up-to-date information. If web search is enabled in your settings, I can find the latest information for you.`;
+      // For factual questions, provide a more conversational response
+      return `Based on what I know, I can tell you that... Well, actually I'd need to look that up to give you an accurate answer. I can help with many questions using my training, but I don't have the ability to search the web unless that feature is enabled in settings.`;
     
     case "weather":
-      return "I'd be happy to check the weather for you! For the most accurate forecast, I'd need to connect to a weather service. You can enable this feature in settings if you'd like real-time weather updates.";
+      return "I'd be happy to tell you about the weather, but I'll need access to current data for that. If you enable the weather feature in settings, I can provide real-time forecasts.";
     
     case "news":
-      return "You're interested in staying current with events - that's great! If you enable web search in settings, I can provide you with the latest headlines and stories that matter to you.";
+      return "I'd love to share the latest news with you, but I don't have access to current events unless the web search feature is enabled. Is there something specific you're interested in learning about?";
     
-    case "music":
-      return "Music adds so much to our lives, doesn't it? While I can't play songs directly, I can certainly discuss artists, genres, or recommend music based on your preferences. What kind of music do you enjoy?";
-    
-    case "cooking":
-      return "Food is one of life's great pleasures! Are you looking for recipe ideas, cooking techniques, or meal planning suggestions? I'd be happy to discuss culinary topics with you.";
-    
-    case "humor":
-      return "Everyone could use a good laugh! Here's a joke for you: Why don't scientists trust atoms? Because they make up everything! Would you like another one?";
-    
-    case "definition":
-      return "That's an interesting term to explore. I'd be happy to discuss what I know about it, though enabling web search would give us the most comprehensive and up-to-date information.";
-    
-    case "health":
-      return "Health is certainly important! While I can share general information, remember that for medical advice, it's always best to consult with healthcare professionals. What aspect of health are you curious about?";
-      
-    case "technology":
-      return "Technology is advancing so quickly these days! I'm happy to discuss tech topics, trends, or concepts you're curious about. What specific aspect interests you most?";
+    // ... keep existing code (other topic responses)
     
     default:
       switch(persona) {
@@ -421,12 +440,17 @@ export const saveToMemory = (message: string, isFromUser: boolean): void => {
     if (isFromUser) {
       const lowerMessage = message.toLowerCase();
       
-      if (lowerMessage.includes("i like") || lowerMessage.includes("i enjoy") || 
+      // Specifically identify name declarations with higher priority
+      if ((lowerMessage.includes("my name is") || lowerMessage.includes("i am called") || 
+           lowerMessage.includes("call me") || lowerMessage.includes("name's")) && 
+          !lowerMessage.includes("what") && !lowerMessage.includes("?")) {
+        type = "name";
+        importance = 5;
+      } else if (lowerMessage.includes("i like") || lowerMessage.includes("i enjoy") || 
           lowerMessage.includes("i prefer") || lowerMessage.includes("favorite")) {
         type = "preference";
         importance = 4;
-      } else if (lowerMessage.includes("i am") || lowerMessage.includes("i'm") || 
-                 lowerMessage.includes("my name")) {
+      } else if (lowerMessage.includes("i am") || lowerMessage.includes("i'm")) {
         type = "fact";
         importance = 3;
       } else if (lowerMessage.includes("my friend") || lowerMessage.includes("my family") ||

@@ -165,6 +165,13 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         console.log("Processing time/date question");
         responseText = generateResponse(messageText, currentPersona);
       }
+      // Check for name-related questions to handle specially
+      else if (lowerMessage.includes("my name") || 
+               lowerMessage.includes("who am i") ||
+               lowerMessage.includes("what's my name")) {
+        console.log("Processing identity question");
+        responseText = generateResponse(messageText, currentPersona);
+      }
       // Check for model management commands - use a specific model command
       else if (lowerMessage.includes('use model') || 
                lowerMessage.includes('with model') ||
@@ -220,7 +227,7 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
           
           if (matchedModel) {
             if (matchedModel.isDownloaded) {
-              responseText = `The model '${matchedModel.name}' is already downloaded. Would you like to load it?`;
+              responseText = `The model '${matchedModel.name}' is already downloaded. Would you like me to load it?`;
             } else {
               responseText = `I'll download the ${matchedModel.name} model for you. This might take a moment...`;
               
@@ -359,16 +366,18 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         const searchResults = await searchDuckDuckGo(messageText);
         
         if (searchResults && searchResults.length > 0) {
-          // More conversational web search response
-          responseText = `I looked that up for you. Here's what I found about "${messageText}":\n\n`;
+          // Provide a more refined, ChatGPT-like response based on search results
+          let combinedInfo = "";
           searchResults.forEach((result, index) => {
-            if (index < 2) { // Limit to first 2 results for readability
-              responseText += `From ${result.title}: ${result.snippet}\n\n`;
+            if (index < 3) {
+              combinedInfo += result.snippet + " ";
             }
           });
-          responseText += "Is there anything specific from these results you'd like me to explain further?";
+          
+          // Transform the search results into a more natural, conversational response
+          responseText = `Based on what I found, ${combinedInfo.trim()}\n\nThis information comes from various sources online. Is there anything specific about this topic you'd like me to elaborate on?`;
         } else {
-          responseText = `I tried searching the web but couldn't find relevant information about that. Let me try to answer based on what I already know.\n\n`;
+          responseText = `I tried searching for information about that, but couldn't find reliable results. Let me tell you what I know based on my training.\n\n`;
           // Fall back to regular response generation
           responseText += generateResponse(messageText, currentPersona);
         }
@@ -422,9 +431,28 @@ export const useChatState = (isVoiceEnabled: boolean, speakText: (text: string) 
         responseText = generateResponse(messageText, currentPersona);
       }
       
-      // Add relevant memory as context if available
+      // Add relevant memory as context if available, but in a more natural way
       if (relevantMemory && !responseText.includes("I remember") && !usedLocalModel) {
-        responseText = `I remember that ${relevantMemory}. ${responseText}`;
+        // Format memory context more naturally based on persona
+        switch(currentPersona) {
+          case "teacher":
+            responseText = `I recall from our previous conversations that ${relevantMemory}. ${responseText}`;
+            break;
+          case "friend":
+            responseText = `Hey, I remember you mentioned that ${relevantMemory}. ${responseText}`;
+            break;
+          case "professional":
+            responseText = `According to our previous discussion, ${relevantMemory}. ${responseText}`;
+            break;
+          case "creative":
+            responseText = `Drawing from our earlier creative exchange where you mentioned ${relevantMemory}. ${responseText}`;
+            break;
+          case "scientist":
+            responseText = `Based on previous data points from our conversations: ${relevantMemory}. ${responseText}`;
+            break;
+          default:
+            responseText = `I remember you mentioned that ${relevantMemory}. ${responseText}`;
+        }
       }
       
       // Update conversation context with AI response
