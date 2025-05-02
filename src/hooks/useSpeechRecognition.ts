@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 
 interface UseSpeechRecognitionProps {
   onResult: (transcript: string) => void;
+  onInterim?: (transcript: string) => void;
+  onError?: (error: any) => void;
 }
 
 // Define SpeechRecognitionError interface to handle the error event
@@ -11,7 +13,7 @@ interface SpeechRecognitionError extends Event {
   error: string;
 }
 
-export const useSpeechRecognition = ({ onResult }: UseSpeechRecognitionProps) => {
+export const useSpeechRecognition = ({ onResult, onInterim, onError }: UseSpeechRecognitionProps) => {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
@@ -21,18 +23,29 @@ export const useSpeechRecognition = ({ onResult }: UseSpeechRecognitionProps) =>
     if (SpeechRecognitionAPI) {
       recognitionRef.current = new SpeechRecognitionAPI();
       recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+      recognitionRef.current.interimResults = Boolean(onInterim);
       
       recognitionRef.current.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
-        onResult(transcript);
+        const isFinal = event.results[0].isFinal;
+        
+        if (isFinal) {
+          onResult(transcript);
+        } else if (onInterim) {
+          onInterim(transcript);
+        }
       };
       
       recognitionRef.current.onerror = (event) => {
         // Cast event to SpeechRecognitionError to access the error property
         const errorEvent = event as SpeechRecognitionError;
         console.error("Speech recognition error", errorEvent.error);
-        toast.error("Could not understand audio. Please try again.");
+        
+        if (onError) {
+          onError(errorEvent);
+        } else {
+          toast.error("Could not understand audio. Please try again.");
+        }
       };
     } else {
       toast.error("Speech recognition is not supported in this browser");
@@ -43,7 +56,7 @@ export const useSpeechRecognition = ({ onResult }: UseSpeechRecognitionProps) =>
         recognitionRef.current.abort();
       }
     };
-  }, [onResult]);
+  }, [onResult, onInterim, onError]);
 
   return {
     startRecognition: () => recognitionRef.current?.start(),

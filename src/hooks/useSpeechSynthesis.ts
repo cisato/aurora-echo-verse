@@ -8,10 +8,10 @@ interface UseSpeechSynthesisProps {
   useElevenLabs?: boolean;
 }
 
-export const useSpeechSynthesis = ({ onStart, onEnd, useEleven = false }: UseSpeechSynthesisProps = {}) => {
+export const useSpeechSynthesis = ({ onStart, onEnd, useElevenLabs = false }: UseSpeechSynthesisProps = {}) => {
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const elevenLabs = useElevenLabs();
-  const [isElevenLabsEnabled, setIsElevenLabsEnabled] = useState(useEleven);
+  const [isElevenLabsEnabled, setIsElevenLabsEnabled] = useState(useElevenLabs);
   const [currentVoice, setCurrentVoice] = useState<string>("21m00Tcm4TlvDq8ikWAM");
   const [lastSettingsCheck, setLastSettingsCheck] = useState(Date.now());
   

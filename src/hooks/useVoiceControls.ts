@@ -51,6 +51,7 @@ export const useVoiceControls = (
 
   return {
     isRecording,
+    setIsRecording,
     setIsTalking,
     isTalking,
     isVoiceEnabled,
