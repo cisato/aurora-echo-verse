@@ -36,20 +36,27 @@ export function Dashboard() {
     // Navigate to specific page or trigger action based on button name
     switch(action) {
       case "chat":
-        window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
+        navigate("/chat");
+        toast.success("Navigating to chat page");
         break;
       case "voice":
         window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
         break;
       case "search":
+        navigate("/search");
+        toast.success("Navigating to search page");
+        break;
       case "weather":
+        navigate("/weather");
+        toast.success("Navigating to weather page");
+        break;
       case "code":
+        navigate("/code");
+        toast.success("Navigating to code page");
+        break;
       case "web":
-      case "joke":
-      case "help":
-      case "today":
-        // These actions navigate to chat and then send a specific message
-        window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
+        navigate("/web");
+        toast.success("Navigating to web page");
         break;
       case "settings":
         navigate("/settings");
@@ -60,6 +67,12 @@ export function Dashboard() {
         toast.success("Opening memory page");
         break;
       case "reminders":
+        window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
+        break;
+      case "joke":
+      case "help":
+      case "today":
+        // These actions navigate to chat and then send a specific message
         window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
         break;
       default:

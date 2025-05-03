@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ChatWindow } from "@/components/ChatWindow";
 import { Dashboard } from "@/components/Dashboard";
@@ -10,10 +11,12 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useChatState } from "@/hooks/useChatState";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
-  const [activeMode, setActiveMode] = useState("chat");
+  const [activeMode, setActiveMode] = useState("dashboard"); // Default to dashboard view
   const [showWelcome, setShowWelcome] = useState(true);
+  const navigate = useNavigate();
   
   // Create a dummy speakText function for the useChatState hook
   const dummySpeakText = (text: string) => {
@@ -61,10 +64,10 @@ const Index = () => {
   const handleActionRequest = (action: string) => {
     switch(action) {
       case "chat":
-        handleModeChange("chat");
+        navigate("/chat");
         break;
       case "voice":
-        handleModeChange("chat");
+        navigate("/chat");
         setTimeout(() => {
           // Trigger voice button in chat window
           document.querySelector('[aria-label="Toggle recording"]')?.dispatchEvent(
@@ -73,20 +76,16 @@ const Index = () => {
         }, 300);
         break;
       case "search":
-        handleSendMessage("I want to search something online");
-        handleModeChange("chat");
+        navigate("/search");
         break;
       case "weather":
-        handleSendMessage("What's the weather like today?");
-        handleModeChange("chat");
+        navigate("/weather");
         break;
       case "code":
-        handleSendMessage("Can you help me with some code examples?");
-        handleModeChange("chat");
+        navigate("/code");
         break;
       case "web":
-        handleSendMessage("Can you search the web for recent news?");
-        handleModeChange("chat");
+        navigate("/web");
         break;
       case "reminders":
         toast.info("Reminder view not implemented in demo");
@@ -95,19 +94,19 @@ const Index = () => {
         handleModeChange("memory");
         break;
       case "settings":
-        handleModeChange("settings");
+        navigate("/settings");
         break;
       case "today":
         handleSendMessage("What's the date today?");
-        handleModeChange("chat");
+        navigate("/chat");
         break;
       case "help":
         handleSendMessage("What can you help me with?");
-        handleModeChange("chat");
+        navigate("/chat");
         break;
       case "joke":
         handleSendMessage("Tell me a joke");
-        handleModeChange("chat");
+        navigate("/chat");
         break;
       default:
         break;
