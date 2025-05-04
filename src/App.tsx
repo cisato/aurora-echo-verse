@@ -12,6 +12,8 @@ import Search from "./pages/Search";
 import Code from "./pages/Code";
 import Web from "./pages/Web";
 import NotFound from "./pages/NotFound";
+import { AgentFramework } from "./components/AgentFramework";
+import { Multimodal } from "./components/Multimodal";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +31,8 @@ const App = () => (
           <Route path="/search" element={<Search />} />
           <Route path="/code" element={<Code />} />
           <Route path="/web" element={<Web />} />
+          <Route path="/agents" element={<AgentFramework />} />
+          <Route path="/multimodal" element={<Multimodal />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,5 +1,5 @@
 
-import { Brain, CloudSun, Code, Globe, MessageCircle, Mic, Search, Settings as SettingsIcon } from "lucide-react";
+import { Brain, CloudSun, Code, Globe, MessageCircle, Mic, Search, Settings as SettingsIcon, Bot, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -23,13 +23,15 @@ export function QuickActions({ onAction }: QuickActionProps) {
     { name: "Code", icon: Code, color: "bg-aurora-green", action: "code" },
     { name: "Web", icon: Globe, color: "bg-aurora-cyan", action: "web" },
     { name: "Memory", icon: Brain, color: "bg-aurora-purple", action: "memory" },
+    { name: "Agents", icon: Bot, color: "bg-aurora-pink", action: "agents" },
+    { name: "Multimodal", icon: Image, color: "bg-aurora-blue", action: "multimodal" },
     { name: "Settings", icon: SettingsIcon, color: "bg-gray-500", action: "settings" },
   ];
   
   return (
     <>
       <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
         {quickActions.map((item, i) => {
           const Icon = item.icon;
           return (

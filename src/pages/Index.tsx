@@ -4,6 +4,8 @@ import { ChatWindow } from "@/components/ChatWindow";
 import { Dashboard } from "@/components/Dashboard";
 import { Sidebar } from "@/components/Sidebar";
 import { EnhancedMemory } from "@/components/EnhancedMemory";
+import { AgentFramework } from "@/components/AgentFramework";
+import { Multimodal } from "@/components/Multimodal";
 import Settings from "@/pages/Settings";
 import { PersonaSelector } from "@/components/PersonaSelector";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -93,6 +95,12 @@ const Index = () => {
       case "memory":
         handleModeChange("memory");
         break;
+      case "agents":
+        handleModeChange("agents");
+        break;
+      case "multimodal":
+        handleModeChange("multimodal");
+        break;
       case "settings":
         navigate("/settings");
         break;
@@ -145,8 +153,8 @@ const Index = () => {
                 Welcome to Aurora AI Assistant 2.0
               </AlertTitle>
               <AlertDescription className="text-sm">
-                This is an enhanced version of Aurora with an improved memory system. Explore different personas, 
-                try voice commands, and check out the dashboard. Click the microphone to speak with Aurora.
+                This is an enhanced version of Aurora with improved memory system, agent framework, and multimodal capabilities.
+                Explore different personas, try voice commands, and check out the advanced features.
               </AlertDescription>
               
               <div className="mt-4 flex flex-wrap gap-2">
@@ -156,11 +164,11 @@ const Index = () => {
                 <Button size="sm" variant="outline" onClick={() => handleQuickAction("weather")}>
                   Check weather
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => handleQuickAction("help")}>
-                  Help me
+                <Button size="sm" variant="outline" onClick={() => handleQuickAction("agents")}>
+                  Explore agents
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => handleQuickAction("joke")}>
-                  Tell a joke
+                <Button size="sm" variant="outline" onClick={() => handleQuickAction("multimodal")}>
+                  Multimodal tools
                 </Button>
               </div>
             </Alert>
@@ -183,6 +191,10 @@ const Index = () => {
         {activeMode === "dashboard" && <Dashboard />}
         
         {activeMode === "memory" && <EnhancedMemory />}
+        
+        {activeMode === "agents" && <AgentFramework />}
+        
+        {activeMode === "multimodal" && <Multimodal />}
         
         {activeMode === "settings" && <Settings />}
       </div>

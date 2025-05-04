@@ -1,85 +1,99 @@
 
-import { AuroraAvatar } from "@/components/AuroraAvatar";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Brain, Home, MessageSquare, Settings, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { AuroraAvatar } from "./AuroraAvatar";
+import { MessageCircle, LayoutDashboard, Brain, Settings2, Bot, Image } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface SidebarProps {
-  activeMode: string;
   onModeChange: (mode: string) => void;
+  activeMode: string;
 }
 
-export function Sidebar({ activeMode, onModeChange }: SidebarProps) {
-  return (
-    <div className="w-[70px] md:w-[240px] h-full flex flex-col bg-sidebar-background border-r border-sidebar-border">
-      {/* Logo area */}
-      <div className="flex items-center gap-2 p-4 h-[60px]">
-        <AuroraAvatar size="sm" isActive={true} />
-        <span className="font-bold text-lg hidden md:block">Aurora</span>
-      </div>
-      
-      {/* Navigation items */}
-      <div className="flex-1 py-4">
-        <nav className="space-y-2 px-2">
-          <SidebarItem 
-            icon={<MessageSquare className="w-5 h-5" />}
-            title="Chat"
-            active={activeMode === "chat"}
-            onClick={() => onModeChange("chat")}
-          />
-          
-          <SidebarItem 
-            icon={<Home className="w-5 h-5" />}
-            title="Dashboard"
-            active={activeMode === "dashboard"}
-            onClick={() => onModeChange("dashboard")}
-          />
+export function Sidebar({ onModeChange, activeMode }: SidebarProps) {
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
+  
+  useEffect(() => {
+    // Load voice enabled setting from localStorage
+    try {
+      const savedSettings = localStorage.getItem("settings");
+      if (savedSettings) {
+        const { voiceEnabled } = JSON.parse(savedSettings);
+        if (voiceEnabled !== undefined) {
+          setIsVoiceEnabled(voiceEnabled);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load voice settings:", error);
+    }
+    
+    // Listen for storage changes to update voice setting
+    const handleStorageChange = () => {
+      try {
+        const savedSettings = localStorage.getItem("settings");
+        if (savedSettings) {
+          const { voiceEnabled } = JSON.parse(savedSettings);
+          if (voiceEnabled !== undefined) {
+            setIsVoiceEnabled(voiceEnabled);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to update settings from storage event:", error);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+  
+  const navItems = [
+    { name: "Dashboard", icon: LayoutDashboard, mode: "dashboard" },
+    { name: "Chat", icon: MessageCircle, mode: "chat" },
+    { name: "Memory", icon: Brain, mode: "memory" },
+    { name: "Agents", icon: Bot, mode: "agents" },
+    { name: "Multimodal", icon: Image, mode: "multimodal" },
+    { name: "Settings", icon: Settings2, mode: "settings" }
+  ];
 
-          <SidebarItem 
-            icon={<Brain className="w-5 h-5" />}
-            title="Memory"
-            active={activeMode === "memory"}
-            onClick={() => onModeChange("memory")}
-          />
-          
-          <SidebarItem 
-            icon={<Settings className="w-5 h-5" />}
-            title="Settings"
-            active={activeMode === "settings"}
-            onClick={() => onModeChange("settings")}
-          />
-        </nav>
-      </div>
-      
-      {/* Footer */}
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center justify-between">
-          <ThemeToggle />
-          <span className="text-xs text-sidebar-foreground/60 hidden md:inline-block">v2.0.0</span>
+  return (
+    <div className="w-16 sm:w-20 h-full border-r flex flex-col items-center justify-between py-4 bg-background/60 backdrop-blur-lg">
+      <div className="flex flex-col items-center">
+        <div className="mb-8">
+          <AuroraAvatar isActive={isVoiceEnabled} size="md" />
+        </div>
+        
+        <div className="space-y-4">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeMode === item.mode;
+            
+            return (
+              <Button
+                key={item.mode}
+                variant="ghost"
+                size="icon"
+                className={`rounded-xl relative ${
+                  isActive ? "bg-primary/10 text-primary" : ""
+                }`}
+                onClick={() => onModeChange(item.mode)}
+              >
+                {isActive && (
+                  <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-full" />
+                )}
+                <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                <span className="sr-only">{item.name}</span>
+              </Button>
+            );
+          })}
         </div>
       </div>
+      
+      <div>
+        <ThemeToggle />
+      </div>
     </div>
-  );
-}
-
-interface SidebarItemProps {
-  icon: React.ReactNode;
-  title: string;
-  active: boolean;
-  onClick: () => void;
-}
-
-function SidebarItem({ icon, title, active, onClick }: SidebarItemProps) {
-  return (
-    <button
-      className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-md transition-colors ${
-        active 
-          ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-          : "hover:bg-sidebar-accent/50 text-sidebar-foreground"
-      }`}
-      onClick={onClick}
-    >
-      <div className="flex-shrink-0">{icon}</div>
-      <span className="hidden md:block">{title}</span>
-    </button>
   );
 }
