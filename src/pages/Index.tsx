@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ChatWindow } from "@/components/ChatWindow";
 import { Dashboard } from "@/components/Dashboard";
 import { Sidebar } from "@/components/Sidebar";
-import { Memory } from "@/components/Memory";
+import { EnhancedMemory } from "@/components/EnhancedMemory";
 import Settings from "@/pages/Settings";
 import { PersonaSelector } from "@/components/PersonaSelector";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -142,11 +142,11 @@ const Index = () => {
                 &times;
               </Button>
               <AlertTitle className="text-accent">
-                Welcome to Aurora AI Assistant
+                Welcome to Aurora AI Assistant 2.0
               </AlertTitle>
               <AlertDescription className="text-sm">
-                This is a demo version of Aurora. Explore different personas, try voice commands, 
-                and check out the dashboard. Click the microphone to speak with Aurora.
+                This is an enhanced version of Aurora with an improved memory system. Explore different personas, 
+                try voice commands, and check out the dashboard. Click the microphone to speak with Aurora.
               </AlertDescription>
               
               <div className="mt-4 flex flex-wrap gap-2">
@@ -182,7 +182,7 @@ const Index = () => {
         
         {activeMode === "dashboard" && <Dashboard />}
         
-        {activeMode === "memory" && <Memory />}
+        {activeMode === "memory" && <EnhancedMemory />}
         
         {activeMode === "settings" && <Settings />}
       </div>
