@@ -1,21 +1,12 @@
 
 import { useState, useEffect } from "react";
-import { ChatWindow } from "@/components/ChatWindow";
-import { Dashboard } from "@/components/Dashboard";
 import { Sidebar } from "@/components/Sidebar";
-import { EnhancedMemory } from "@/components/EnhancedMemory";
-import { AgentFramework } from "@/components/AgentFramework";
-import { Multimodal } from "@/components/Multimodal";
-import Personas from "@/pages/Personas";
-import Settings from "@/pages/Settings";
-import VirtualReality from "@/pages/VirtualReality";
-import { PersonaSelector } from "@/components/PersonaSelector";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useChatState } from "@/hooks/useChatState";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { WelcomeAlert } from "@/components/welcome/WelcomeAlert";
+import { ModeContent } from "@/components/mode-content/ModeContent";
+import { useQuickActions } from "@/hooks/useQuickActions";
 
 const Index = () => {
   const [activeMode, setActiveMode] = useState("dashboard"); // Default to dashboard view
@@ -30,6 +21,7 @@ const Index = () => {
   };
   
   const { handleSendMessage } = useChatState(true, dummySpeakText); // Initialize chat state with both parameters
+  const { handleActionRequest } = useQuickActions({ handleSendMessage });
   
   useEffect(() => {
     // Check if this is the first visit
@@ -53,84 +45,24 @@ const Index = () => {
       handleActionRequest(action);
     };
     
+    // Listen for mode setting events from hook
+    const handleSetMode = (event: CustomEvent) => {
+      const { mode } = event.detail;
+      handleModeChange(mode);
+    };
+    
     window.addEventListener('quickAction', handleQuickAction as EventListener);
+    window.addEventListener('setMode', handleSetMode as EventListener);
     
     return () => {
       window.removeEventListener('quickAction', handleQuickAction as EventListener);
+      window.removeEventListener('setMode', handleSetMode as EventListener);
     };
   }, []);
   
   const handleModeChange = (mode: string) => {
     setActiveMode(mode);
     localStorage.setItem("aurora_last_mode", mode);
-  };
-
-  const handleActionRequest = (action: string) => {
-    switch(action) {
-      case "chat":
-        navigate("/chat");
-        break;
-      case "voice":
-        navigate("/chat");
-        setTimeout(() => {
-          // Trigger voice button in chat window
-          document.querySelector('[aria-label="Toggle recording"]')?.dispatchEvent(
-            new MouseEvent('click', { bubbles: true })
-          );
-        }, 300);
-        break;
-      case "search":
-        navigate("/search");
-        break;
-      case "weather":
-        navigate("/weather");
-        break;
-      case "code":
-        navigate("/code");
-        break;
-      case "web":
-        navigate("/web");
-        break;
-      case "reminders":
-        toast.info("Reminder view not implemented in demo");
-        break;
-      case "memory":
-        handleModeChange("memory");
-        break;
-      case "agents":
-        handleModeChange("agents");
-        break;
-      case "multimodal":
-        handleModeChange("multimodal");
-        break;
-      case "personas":
-        handleModeChange("personas");
-        break;
-      case "vr":
-        navigate("/vr");
-        break;
-      case "settings":
-        navigate("/settings");
-        break;
-      case "today":
-        handleSendMessage("What's the date today?");
-        navigate("/chat");
-        break;
-      case "help":
-        handleSendMessage("What can you help me with?");
-        navigate("/chat");
-        break;
-      case "joke":
-        handleSendMessage("Tell me a joke");
-        navigate("/chat");
-        break;
-      default:
-        break;
-    }
-    
-    if (action !== "reminders") {
-      toast.success(`Quick action: ${action} activated`);
-    }
   };
 
   const handleQuickAction = (action: string) => {
@@ -147,68 +79,13 @@ const Index = () => {
       
       <div className="flex-1 flex flex-col overflow-auto">
         {showWelcome && (
-          <div className="p-4">
-            <Alert className="border-accent/30 relative">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="absolute top-2 right-2 h-6 w-6 p-0 rounded-full"
-                onClick={dismissWelcome}
-              >
-                &times;
-              </Button>
-              <AlertTitle className="text-accent">
-                Welcome to Aurora AI Assistant 3.0
-              </AlertTitle>
-              <AlertDescription className="text-sm">
-                This is an enhanced version of Aurora with improved memory system, agent framework, multimodal capabilities, and multilingual persona support.
-                Explore different personas, try voice commands, and check out the advanced features.
-              </AlertDescription>
-              
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => handleQuickAction("today")}>
-                  What's today?
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => handleQuickAction("weather")}>
-                  Check weather
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => handleQuickAction("agents")}>
-                  Explore agents
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => handleQuickAction("personas")}>
-                  Try personas
-                </Button>
-              </div>
-            </Alert>
-          </div>
+          <WelcomeAlert 
+            onDismiss={dismissWelcome} 
+            onQuickAction={handleQuickAction} 
+          />
         )}
         
-        {activeMode === "chat" && (
-          <>
-            <div className="border-b p-2">
-              <PersonaSelector onSelectPersona={(persona) => {
-                // The actual state change happens inside PersonaSelector 
-                // which stores the selection in localStorage
-                console.log(`Index: Persona changed to: ${persona}`);
-              }} />
-            </div>
-            <ChatWindow />
-          </>
-        )}
-        
-        {activeMode === "dashboard" && <Dashboard />}
-        
-        {activeMode === "memory" && <EnhancedMemory />}
-        
-        {activeMode === "agents" && <AgentFramework />}
-        
-        {activeMode === "multimodal" && <Multimodal />}
-        
-        {activeMode === "personas" && <Personas />}
-        
-        {activeMode === "vr" && <VirtualReality />}
-        
-        {activeMode === "settings" && <Settings />}
+        <ModeContent activeMode={activeMode} />
       </div>
     </div>
   );
