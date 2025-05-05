@@ -56,6 +56,9 @@ export const useQuickActions = (chatState: UseChatState) => {
       case "vr":
         navigate("/vr");
         break;
+      case "analytics":
+        navigate("/analytics");
+        break;
       case "settings":
         navigate("/settings");
         break;

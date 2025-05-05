@@ -16,6 +16,7 @@ import { AgentFramework } from "./components/AgentFramework";
 import { Multimodal } from "./components/Multimodal";
 import Personas from "./pages/Personas";
 import VirtualReality from "./pages/VirtualReality";
+import Analytics from "./pages/Analytics";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/multimodal" element={<Multimodal />} />
               <Route path="/personas" element={<Personas />} />
               <Route path="/vr" element={<VirtualReality />} />
+              <Route path="/analytics" element={<Analytics />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
