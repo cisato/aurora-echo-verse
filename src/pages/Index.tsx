@@ -8,6 +8,7 @@ import { AgentFramework } from "@/components/AgentFramework";
 import { Multimodal } from "@/components/Multimodal";
 import Personas from "@/pages/Personas";
 import Settings from "@/pages/Settings";
+import VirtualReality from "@/pages/VirtualReality";
 import { PersonaSelector } from "@/components/PersonaSelector";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -105,6 +106,9 @@ const Index = () => {
       case "personas":
         handleModeChange("personas");
         break;
+      case "vr":
+        navigate("/vr");
+        break;
       case "settings":
         navigate("/settings");
         break;
@@ -141,7 +145,7 @@ const Index = () => {
     <div className="h-screen flex overflow-hidden bg-gradient-mesh">
       <Sidebar onModeChange={handleModeChange} activeMode={activeMode} />
       
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-auto">
         {showWelcome && (
           <div className="p-4">
             <Alert className="border-accent/30 relative">
@@ -201,6 +205,8 @@ const Index = () => {
         {activeMode === "multimodal" && <Multimodal />}
         
         {activeMode === "personas" && <Personas />}
+        
+        {activeMode === "vr" && <VirtualReality />}
         
         {activeMode === "settings" && <Settings />}
       </div>
