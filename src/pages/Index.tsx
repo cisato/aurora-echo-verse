@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { EnhancedMemory } from "@/components/EnhancedMemory";
 import { AgentFramework } from "@/components/AgentFramework";
 import { Multimodal } from "@/components/Multimodal";
+import Personas from "@/pages/Personas";
 import Settings from "@/pages/Settings";
 import { PersonaSelector } from "@/components/PersonaSelector";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -101,6 +102,9 @@ const Index = () => {
       case "multimodal":
         handleModeChange("multimodal");
         break;
+      case "personas":
+        handleModeChange("personas");
+        break;
       case "settings":
         navigate("/settings");
         break;
@@ -150,10 +154,10 @@ const Index = () => {
                 &times;
               </Button>
               <AlertTitle className="text-accent">
-                Welcome to Aurora AI Assistant 2.0
+                Welcome to Aurora AI Assistant 3.0
               </AlertTitle>
               <AlertDescription className="text-sm">
-                This is an enhanced version of Aurora with improved memory system, agent framework, and multimodal capabilities.
+                This is an enhanced version of Aurora with improved memory system, agent framework, multimodal capabilities, and multilingual persona support.
                 Explore different personas, try voice commands, and check out the advanced features.
               </AlertDescription>
               
@@ -167,8 +171,8 @@ const Index = () => {
                 <Button size="sm" variant="outline" onClick={() => handleQuickAction("agents")}>
                   Explore agents
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => handleQuickAction("multimodal")}>
-                  Multimodal tools
+                <Button size="sm" variant="outline" onClick={() => handleQuickAction("personas")}>
+                  Try personas
                 </Button>
               </div>
             </Alert>
@@ -196,10 +200,12 @@ const Index = () => {
         
         {activeMode === "multimodal" && <Multimodal />}
         
+        {activeMode === "personas" && <Personas />}
+        
         {activeMode === "settings" && <Settings />}
       </div>
     </div>
   );
-};
+}
 
 export default Index;
