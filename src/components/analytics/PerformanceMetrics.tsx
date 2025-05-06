@@ -12,6 +12,7 @@ export function PerformanceMetrics() {
   const [performanceData, setPerformanceData] = useState<(ModelConfig & { usage: ModelUsage })[]>([]);
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRefreshIndicator, setShowRefreshIndicator] = useState(false);
   
   // Generate some simulated historical data
   useEffect(() => {
@@ -41,9 +42,9 @@ export function PerformanceMetrics() {
     setHistoricalData(generateHistoricalData());
   }, []);
   
-  useEffect(() => {
-    const fetchPerformanceData = async () => {
-      setIsLoading(true);
+  const fetchPerformanceData = async () => {
+    setIsLoading(true);
+    try {
       const modelPerformanceData = await Promise.all(
         models.map(async (model) => {
           const usage = await getModelUsage(model.name);
@@ -54,29 +55,52 @@ export function PerformanceMetrics() {
       // Sort by average latency (fastest first)
       modelPerformanceData.sort((a, b) => a.usage.averageLatency - b.usage.averageLatency);
       setPerformanceData(modelPerformanceData);
+    } catch (error) {
+      console.error("Error fetching performance data:", error);
+    } finally {
       setIsLoading(false);
-    };
-    
+    }
+  };
+  
+  useEffect(() => {
     fetchPerformanceData();
+    
+    // Refresh data every 2 minutes
+    const intervalId = setInterval(() => {
+      fetchPerformanceData();
+    }, 120000);
+    
+    return () => clearInterval(intervalId);
   }, [models, getModelUsage]);
+  
+  const handleRefresh = () => {
+    setShowRefreshIndicator(true);
+    fetchPerformanceData().then(() => {
+      setTimeout(() => setShowRefreshIndicator(false), 1000);
+    });
+  };
   
   // Chart config
   const chartConfig = {
     "Phi-3-mini-4k-instruct": {
       label: "Phi-3 Mini",
+      theme: { light: "#8884d8", dark: "#a997ff" },
     },
     "Llama-3-8B-Instruct": {
       label: "Llama-3 8B",
+      theme: { light: "#82ca9d", dark: "#93ddb6" },
     },
     "Whisper-Tiny": {
       label: "Whisper Tiny",
+      theme: { light: "#ffc658", dark: "#ffd57e" },
     },
     "GPT-Neo-1.3B": {
       label: "GPT-Neo",
+      theme: { light: "#ff8042", dark: "#ff9966" },
     },
   };
   
-  if (isLoading) {
+  if (isLoading && performanceData.length === 0) {
     return <div className="flex justify-center items-center h-80">Loading performance data...</div>;
   }
   
@@ -89,8 +113,21 @@ export function PerformanceMetrics() {
   
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-medium">Model Response Times</h2>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh} 
+          disabled={isLoading || showRefreshIndicator}
+          className="transition-all"
+        >
+          {showRefreshIndicator ? "Refreshed!" : isLoading ? "Refreshing..." : "Refresh Data"}
+        </Button>
+      </div>
+      
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+        <Card className="bg-card/50 hover:bg-card/80 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Fastest Model
@@ -107,7 +144,7 @@ export function PerformanceMetrics() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-card/50 hover:bg-card/80 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Average Latency
@@ -124,7 +161,7 @@ export function PerformanceMetrics() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-card/50 hover:bg-card/80 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Slowest Model
@@ -142,16 +179,16 @@ export function PerformanceMetrics() {
         </Card>
       </div>
       
-      <Card>
-        <CardHeader>
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/50">
           <CardTitle>Latency Trends (Last 14 Days)</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="h-80">
             <ChartContainer config={chartConfig}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={historicalData}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.6} />
                   <XAxis dataKey="date" />
                   <YAxis label={{ value: 'Latency (ms)', angle: -90, position: 'insideLeft' }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
@@ -161,10 +198,11 @@ export function PerformanceMetrics() {
                     dataKey="Phi-3-mini-4k-instruct" 
                     stroke="#8884d8" 
                     activeDot={{ r: 8 }} 
+                    strokeWidth={2}
                   />
-                  <Line type="monotone" dataKey="Llama-3-8B-Instruct" stroke="#82ca9d" />
-                  <Line type="monotone" dataKey="Whisper-Tiny" stroke="#ffc658" />
-                  <Line type="monotone" dataKey="GPT-Neo-1.3B" stroke="#ff8042" />
+                  <Line type="monotone" dataKey="Llama-3-8B-Instruct" stroke="#82ca9d" strokeWidth={2} />
+                  <Line type="monotone" dataKey="Whisper-Tiny" stroke="#ffc658" strokeWidth={2} />
+                  <Line type="monotone" dataKey="GPT-Neo-1.3B" stroke="#ff8042" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -172,17 +210,17 @@ export function PerformanceMetrics() {
         </CardContent>
       </Card>
       
-      <Card>
-        <CardHeader>
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/50">
           <CardTitle>Performance by Model Size</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart
                 margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.6} />
                 <XAxis 
                   type="number"
                   dataKey="size" 
@@ -206,7 +244,11 @@ export function PerformanceMetrics() {
                   }))}
                   fill="#8884d8" 
                   name="Response Time"
-                />
+                >
+                  {performanceData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={Object.values(chartConfig)[index % Object.values(chartConfig).length].theme.light} />
+                  ))}
+                </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
           </div>

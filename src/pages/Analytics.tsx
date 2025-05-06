@@ -28,17 +28,33 @@ export default function Analytics() {
         </p>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-5 gap-2">
-          <TabsTrigger value="usage">Usage</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="statistics">Statistics</TabsTrigger>
-          <TabsTrigger value="historical">Historical</TabsTrigger>
-          <TabsTrigger value="comparison">Comparison</TabsTrigger>
-        </TabsList>
+      <Tabs 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="space-y-6"
+      >
+        <div className="bg-background sticky top-0 z-10 pb-4 backdrop-blur-sm">
+          <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-5 gap-2">
+            <TabsTrigger value="usage" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Usage
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Performance
+            </TabsTrigger>
+            <TabsTrigger value="statistics" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Statistics
+            </TabsTrigger>
+            <TabsTrigger value="historical" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Historical
+            </TabsTrigger>
+            <TabsTrigger value="comparison" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Comparison
+            </TabsTrigger>
+          </TabsList>
+        </div>
         
-        <TabsContent value="usage" className="space-y-4">
-          <Card>
+        <TabsContent value="usage" className="space-y-6 animate-fade-in">
+          <Card className="shadow-md border-muted">
             <CardHeader>
               <CardTitle>Model Usage Analytics</CardTitle>
               <CardDescription>
@@ -51,8 +67,8 @@ export default function Analytics() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="performance" className="space-y-4">
-          <Card>
+        <TabsContent value="performance" className="space-y-6 animate-fade-in">
+          <Card className="shadow-md border-muted">
             <CardHeader>
               <CardTitle>Performance Metrics</CardTitle>
               <CardDescription>
@@ -65,8 +81,8 @@ export default function Analytics() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="statistics" className="space-y-4">
-          <Card>
+        <TabsContent value="statistics" className="space-y-6 animate-fade-in">
+          <Card className="shadow-md border-muted">
             <CardHeader>
               <CardTitle>Usage Statistics</CardTitle>
               <CardDescription>
@@ -79,8 +95,8 @@ export default function Analytics() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="historical" className="space-y-4">
-          <Card>
+        <TabsContent value="historical" className="space-y-6 animate-fade-in">
+          <Card className="shadow-md border-muted">
             <CardHeader>
               <CardTitle>Historical Data</CardTitle>
               <CardDescription>
@@ -93,8 +109,8 @@ export default function Analytics() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="comparison" className="space-y-4">
-          <Card>
+        <TabsContent value="comparison" className="space-y-6 animate-fade-in">
+          <Card className="shadow-md border-muted">
             <CardHeader>
               <CardTitle>Model Comparison</CardTitle>
               <CardDescription>
