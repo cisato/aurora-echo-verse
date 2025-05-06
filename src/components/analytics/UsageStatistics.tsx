@@ -63,6 +63,12 @@ export function UsageStatistics() {
     },
   };
   
+  // Find the most used feature for display
+  const mostUsedFeature = [...featureUsageData].sort((a, b) => b.value - a.value)[0];
+  const MostUsedIcon = mostUsedFeature.icon;
+  const totalUsage = featureUsageData.reduce((acc, feature) => acc + feature.value, 0);
+  const usagePercentage = Math.round((mostUsedFeature.value / totalUsage) * 100);
+  
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
@@ -109,15 +115,14 @@ export function UsageStatistics() {
             <CardTitle className="text-sm font-medium">
               Most Used Feature
             </CardTitle>
-            <featureUsageData[0].icon className="h-4 w-4 text-muted-foreground" />
+            {MostUsedIcon && <MostUsedIcon className="h-4 w-4 text-muted-foreground" />}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {featureUsageData.sort((a, b) => b.value - a.value)[0].name}
+              {mostUsedFeature.name}
             </div>
             <p className="text-xs text-muted-foreground">
-              {Math.round(featureUsageData.sort((a, b) => b.value - a.value)[0].value / 
-                featureUsageData.reduce((acc, feature) => acc + feature.value, 0) * 100)}% of total usage
+              {usagePercentage}% of total usage
             </p>
           </CardContent>
         </Card>
