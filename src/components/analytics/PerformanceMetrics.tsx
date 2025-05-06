@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ScatterChart, Scatter } from "recharts";
 import { useLocalAI, ModelConfig, ModelUsage } from "@/hooks/useLocalAI";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Chart, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { TrendingUp, TrendingDown, Gauge } from "lucide-react";
 
 export function PerformanceMetrics() {
@@ -179,30 +179,35 @@ export function PerformanceMetrics() {
         <CardContent>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={performanceData.map(model => ({
-                  name: model.name,
-                  size: model.size,
-                  latency: model.usage.averageLatency
-                }))}
+              <ScatterChart
+                margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
+                  type="number"
                   dataKey="size" 
+                  name="Size"
+                  unit=" MB"
                   label={{ value: 'Model Size (MB)', position: 'insideBottom', offset: -5 }} 
                 />
                 <YAxis 
+                  type="number"
+                  dataKey="latency" 
+                  name="Latency"
+                  unit=" ms"
                   label={{ value: 'Latency (ms)', angle: -90, position: 'insideLeft' }} 
                 />
-                <Tooltip />
-                <Line 
-                  type="scatter" 
-                  dataKey="latency" 
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                <Scatter 
+                  data={performanceData.map(model => ({
+                    name: model.name,
+                    size: model.size,
+                    latency: model.usage.averageLatency
+                  }))}
                   fill="#8884d8" 
                   name="Response Time"
-                  dot={{ r: 6 }}
                 />
-              </LineChart>
+              </ScatterChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
