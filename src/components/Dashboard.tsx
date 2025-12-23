@@ -1,17 +1,22 @@
 
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { StatusCards } from "./dashboard/StatusCards";
+import { AuroraStatusCard } from "./dashboard/AuroraStatusCard";
+import { AiModelsCard } from "./dashboard/AiModelsCard";
+import { RecentActivityCard } from "./dashboard/RecentActivityCard";
 import { QuickActions } from "./dashboard/QuickActions";
-import { SystemStatus } from "./dashboard/SystemStatus";
+import { EnhancedMemoryCard } from "./dashboard/EnhancedMemoryCard";
+import { RemindersCard } from "./dashboard/RemindersCard";
+import { AgentStatusCard } from "./dashboard/AgentStatusCard";
+import { MultimodalCapabilitiesCard } from "./dashboard/MultimodalCapabilitiesCard";
+import { DashboardSettings } from "./dashboard/DashboardSettings";
+import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { widgets } = useDashboardWidgets();
   
-  // Handler for quick actions
   const handleQuickAction = (action: string) => {
-    // Navigate to specific page or trigger action based on button name
     switch(action) {
       case "chat":
         navigate("/chat");
@@ -50,7 +55,6 @@ export function Dashboard() {
       case "joke":
       case "help":
       case "today":
-        // These actions navigate to chat and then send a specific message
         window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
         break;
       default:
@@ -58,17 +62,46 @@ export function Dashboard() {
         break;
     }
   };
+
+  const statusCards = [
+    widgets.auroraStatus && <AuroraStatusCard key="aurora" />,
+    widgets.aiModels && <AiModelsCard key="models" />,
+    widgets.recentActivity && <RecentActivityCard key="activity" />,
+  ].filter(Boolean);
+
+  const systemCards = [
+    widgets.enhancedMemory && <EnhancedMemoryCard key="memory" />,
+    widgets.reminders && <RemindersCard key="reminders" onViewAllReminders={() => handleQuickAction("reminders")} />,
+    widgets.agentStatus && <AgentStatusCard key="agent" />,
+    widgets.multimodal && <MultimodalCapabilitiesCard key="multimodal" />,
+  ].filter(Boolean);
   
   return (
     <div className="p-6 overflow-auto">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
-        <p className="text-muted-foreground">Here's your AI assistant status and activity</p>
+      <header className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
+          <p className="text-muted-foreground">Here's your AI assistant status and activity</p>
+        </div>
+        <DashboardSettings />
       </header>
       
-      <StatusCards />
-      <QuickActions onAction={handleQuickAction} />
-      <SystemStatus onViewAllReminders={() => handleQuickAction("reminders")} />
+      {statusCards.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {statusCards}
+        </div>
+      )}
+      
+      {widgets.quickActions && <QuickActions onAction={handleQuickAction} />}
+      
+      {systemCards.length > 0 && (
+        <>
+          <h2 className="text-xl font-bold mb-4">System Status</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {systemCards}
+          </div>
+        </>
+      )}
     </div>
   );
 }
