@@ -8,7 +8,6 @@ import { PersonaSelector } from "@/components/PersonaSelector";
 import Personas from "@/pages/Personas";
 import VirtualReality from "@/pages/VirtualReality";
 import Settings from "@/pages/Settings";
-import Analytics from "@/pages/Analytics";
 
 interface ModeContentProps {
   activeMode: string;
@@ -52,10 +51,6 @@ export function ModeContent({ activeMode }: ModeContentProps) {
   
   if (activeMode === "vr") {
     return <VirtualReality />;
-  }
-  
-  if (activeMode === "analytics") {
-    return <Analytics />;
   }
   
   if (activeMode === "settings") {
