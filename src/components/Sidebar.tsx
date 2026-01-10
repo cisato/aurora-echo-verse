@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AuroraAvatar } from "./AuroraAvatar";
 import { MessageCircle, LayoutDashboard, Brain, Settings2, Bot, Image, User, Glasses, FileText } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { UserMenu } from "./UserMenu";
 
 interface SidebarProps {
   onModeChange: (mode: string) => void;
@@ -94,8 +95,9 @@ export function Sidebar({ onModeChange, activeMode }: SidebarProps) {
         </div>
       </div>
       
-      <div>
+      <div className="flex flex-col items-center gap-2">
         <ThemeToggle />
+        <UserMenu />
       </div>
     </div>
   );
