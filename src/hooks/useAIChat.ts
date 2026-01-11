@@ -14,11 +14,13 @@ export function useAIChat(persona: string = 'assistant') {
 
   const streamChat = useCallback(async ({
     messages,
+    userName,
     onDelta,
     onDone,
     onError,
   }: {
     messages: Message[];
+    userName?: string;
     onDelta: (deltaText: string) => void;
     onDone: () => void;
     onError?: (error: Error) => void;
@@ -33,7 +35,7 @@ export function useAIChat(persona: string = 'assistant') {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages, persona }),
+        body: JSON.stringify({ messages, persona, userName }),
         signal: abortControllerRef.current.signal,
       });
 

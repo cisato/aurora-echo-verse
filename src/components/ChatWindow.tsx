@@ -1,30 +1,46 @@
 import { useEffect, useRef, useState } from "react";
 import { ChatInput } from "./ChatInput";
 import { Messages } from "./chat/Messages";
+import { ConversationHistory } from "./ConversationHistory";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { useVoiceControls } from "@/hooks/useVoiceControls";
 import { useAIChat } from "@/hooks/useAIChat";
+import { useConversations } from "@/hooks/useConversations";
+import { useProfile } from "@/hooks/useProfile";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import { toast } from "sonner";
 import { ChatMessageProps } from "./ChatMessage";
 
 export function ChatWindow() {
   const initialGreetingRef = useRef(false);
   const settingsInitializedRef = useRef(false);
-  const [currentPersona, setCurrentPersona] = useState("assistant");
-  const [messages, setMessages] = useState<ChatMessageProps[]>([]);
+  const [displayMessages, setDisplayMessages] = useState<ChatMessageProps[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  const { streamChat, isStreaming, cancelStream } = useAIChat(currentPersona);
+  const { profile } = useProfile();
+  const { settings } = useUserSettings();
+  const {
+    conversations,
+    currentConversation,
+    messages: dbMessages,
+    createConversation,
+    selectConversation,
+    addMessage,
+    deleteConversation
+  } = useConversations();
 
-  const { speak, cancel: cancelSpeech, usingElevenLabs, refreshSettings } = useSpeechSynthesis({
+  const { streamChat, isStreaming } = useAIChat(settings.active_persona);
+
+  const { speak, cancel: cancelSpeech, refreshSettings } = useSpeechSynthesis({
     onStart: () => setIsTalking(true),
     onEnd: () => setIsTalking(false)
   });
 
   const speakText = (text: string) => {
-    if (!isVoiceEnabled) return;
+    if (!settings.voice_enabled) return;
     
     try {
       let voice = null;
@@ -74,75 +90,63 @@ export function ChatWindow() {
     toggleVoice
   } = useVoiceControls(startRecognition, stopRecognition, cancelSpeech);
 
-  // Load initial greeting
+  // Sync voice enabled with settings
   useEffect(() => {
-    const initialGreeting: ChatMessageProps = {
-      message: "Hello! I'm Aurora, your AI assistant. How can I help you today?",
-      sender: "bot",
-      timestamp: new Date(),
-      emotion: "happy"
-    };
-    
-    setTimeout(() => {
-      setMessages([initialGreeting]);
-    }, 500);
-  }, []);
+    setIsVoiceEnabled(settings.voice_enabled);
+  }, [settings.voice_enabled, setIsVoiceEnabled]);
 
-  // Load settings and initialize voice settings
+  // Convert DB messages to display format
   useEffect(() => {
-    if (settingsInitializedRef.current) return;
-    
-    try {
-      const savedSettings = localStorage.getItem("settings");
-      if (savedSettings) {
-        const { voiceEnabled, activePersona } = JSON.parse(savedSettings);
-        if (voiceEnabled !== undefined) {
-          setIsVoiceEnabled(voiceEnabled);
-        }
-        if (activePersona) {
-          setCurrentPersona(activePersona);
-        }
-      }
-      
-      refreshSettings();
-      settingsInitializedRef.current = true;
-    } catch (error) {
-      console.error("Failed to load settings:", error);
+    if (dbMessages.length > 0) {
+      const formatted: ChatMessageProps[] = dbMessages.map(msg => ({
+        message: msg.content,
+        sender: msg.role === 'user' ? 'user' : 'bot',
+        timestamp: new Date(msg.created_at),
+        emotion: msg.emotion as ChatMessageProps['emotion']
+      }));
+      setDisplayMessages(formatted);
+      initialGreetingRef.current = true;
+    } else if (!currentConversation) {
+      // Show initial greeting for new/no conversation
+      const initialGreeting: ChatMessageProps = {
+        message: profile?.display_name 
+          ? `Hello ${profile.display_name}! I'm Aurora, your AI assistant. How can I help you today?`
+          : "Hello! I'm Aurora, your AI assistant. How can I help you today?",
+        sender: "bot",
+        timestamp: new Date(),
+        emotion: "happy"
+      };
+      setDisplayMessages([initialGreeting]);
     }
-    
-    const handleStorageChange = () => {
-      try {
-        const savedSettings = localStorage.getItem("settings");
-        if (savedSettings) {
-          const { voiceEnabled } = JSON.parse(savedSettings);
-          if (voiceEnabled !== undefined) {
-            setIsVoiceEnabled(voiceEnabled);
-          }
-        }
-        refreshSettings();
-      } catch (error) {
-        console.error("Failed to update settings:", error);
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [setIsVoiceEnabled, refreshSettings]);
+  }, [dbMessages, currentConversation, profile?.display_name]);
 
   // Speak initial greeting
   useEffect(() => {
-    if (!initialGreetingRef.current && messages.length > 0 && isVoiceEnabled) {
-      const greeting = messages[0].message;
+    if (!initialGreetingRef.current && displayMessages.length > 0 && settings.voice_enabled) {
+      const greeting = displayMessages[0].message;
       setTimeout(() => {
         speakText(greeting);
         initialGreetingRef.current = true;
       }, 500);
     }
-  }, [messages, isVoiceEnabled]);
+  }, [displayMessages, settings.voice_enabled]);
+
+  const handleNewConversation = async () => {
+    await createConversation();
+    initialGreetingRef.current = false;
+  };
 
   const handleSendMessage = async (overrideText?: string) => {
     const messageText = overrideText || inputText;
     if (!messageText.trim()) return;
+
+    // Create conversation if none exists
+    let conversationId = currentConversation?.id;
+    if (!conversationId) {
+      const newConv = await createConversation(messageText.slice(0, 50));
+      if (!newConv) return;
+      conversationId = newConv.id;
+    }
 
     const userMessage: ChatMessageProps = {
       message: messageText,
@@ -150,12 +154,15 @@ export function ChatWindow() {
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setDisplayMessages(prev => [...prev, userMessage]);
     setInputText("");
     setIsLoading(true);
 
+    // Save user message to DB
+    await addMessage('user', messageText);
+
     // Build messages for API
-    const apiMessages = messages
+    const apiMessages = displayMessages
       .filter(m => m.message)
       .map(m => ({
         role: m.sender === "user" ? "user" as const : "assistant" as const,
@@ -169,9 +176,10 @@ export function ChatWindow() {
     try {
       await streamChat({
         messages: apiMessages,
+        userName: profile?.display_name || undefined,
         onDelta: (chunk) => {
           assistantContent += chunk;
-          setMessages(prev => {
+          setDisplayMessages(prev => {
             const last = prev[prev.length - 1];
             if (last?.sender === "bot" && !last.isLoading) {
               return prev.map((m, i) => 
@@ -188,10 +196,14 @@ export function ChatWindow() {
             }];
           });
         },
-        onDone: () => {
+        onDone: async () => {
           setIsLoading(false);
-          if (isVoiceEnabled && assistantContent) {
-            speakText(assistantContent);
+          // Save assistant message to DB
+          if (assistantContent) {
+            await addMessage('assistant', assistantContent, 'neutral');
+            if (settings.voice_enabled) {
+              speakText(assistantContent);
+            }
           }
         },
         onError: (error) => {
@@ -207,18 +219,30 @@ export function ChatWindow() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <Messages messages={messages} isLoading={isLoading && !isStreaming} />
-      <ChatInput
-        inputText={inputText}
-        onInputChange={setInputText}
-        onSend={() => handleSendMessage()}
-        onToggleRecording={toggleRecording}
-        onToggleVoice={toggleVoice}
-        isRecording={isRecording}
-        isVoiceEnabled={isVoiceEnabled}
-        isTalking={isTalking}
+    <div className="flex h-full">
+      <ConversationHistory
+        conversations={conversations}
+        currentConversation={currentConversation}
+        onSelectConversation={selectConversation}
+        onNewConversation={handleNewConversation}
+        onDeleteConversation={deleteConversation}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
+      
+      <div className="flex flex-col flex-1 min-w-0">
+        <Messages messages={displayMessages} isLoading={isLoading && !isStreaming} />
+        <ChatInput
+          inputText={inputText}
+          onInputChange={setInputText}
+          onSend={() => handleSendMessage()}
+          onToggleRecording={toggleRecording}
+          onToggleVoice={toggleVoice}
+          isRecording={isRecording}
+          isVoiceEnabled={isVoiceEnabled}
+          isTalking={isTalking}
+        />
+      </div>
     </div>
   );
 }
