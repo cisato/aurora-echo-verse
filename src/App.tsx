@@ -20,6 +20,7 @@ import Personas from "./pages/Personas";
 import VirtualReality from "./pages/VirtualReality";
 import Reports from "./pages/Reports";
 import Auth from "./pages/Auth";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +93,11 @@ const App = () => (
                 <Route path="/reports" element={
                   <ProtectedRoute>
                     <Reports />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
                   </ProtectedRoute>
                 } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
