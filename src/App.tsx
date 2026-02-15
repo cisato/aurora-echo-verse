@@ -21,6 +21,7 @@ import VirtualReality from "./pages/VirtualReality";
 import Reports from "./pages/Reports";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <div className="flex-1 overflow-auto">
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/" element={
                   <ProtectedRoute>
                     <Index />
