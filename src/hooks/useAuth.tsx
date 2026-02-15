@@ -36,7 +36,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Clear session on browser close if "Remember me" was not checked
+    const handleBeforeUnload = () => {
+      const rememberMe = localStorage.getItem('aurora-remember-me');
+      if (rememberMe === 'false') {
+        localStorage.removeItem('sb-ppxaoeujqvwjcqkfgbyi-auth-token');
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName?: string) => {
