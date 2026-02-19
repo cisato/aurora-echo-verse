@@ -9,17 +9,20 @@ import { useAIChat } from "@/hooks/useAIChat";
 import { useConversations } from "@/hooks/useConversations";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useMemorySystem } from "@/hooks/useMemorySystem";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { ChatMessageProps } from "./ChatMessage";
 
 export function ChatWindow() {
   const initialGreetingRef = useRef(false);
-  const settingsInitializedRef = useRef(false);
   const [displayMessages, setDisplayMessages] = useState<ChatMessageProps[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [currentEmotionMode, setCurrentEmotionMode] = useState<string>("default");
 
+  const { user } = useAuth();
   const { profile } = useProfile();
   const { settings } = useUserSettings();
   const {
@@ -33,30 +36,26 @@ export function ChatWindow() {
   } = useConversations();
 
   const { streamChat, isStreaming } = useAIChat(settings.active_persona);
+  const { analyzeEmotion, extractMemory } = useMemorySystem();
 
-  const { speak, cancel: cancelSpeech, refreshSettings } = useSpeechSynthesis({
+  const { speak, cancel: cancelSpeech } = useSpeechSynthesis({
     onStart: () => setIsTalking(true),
     onEnd: () => setIsTalking(false)
   });
 
   const speakText = (text: string) => {
     if (!settings.voice_enabled) return;
-    
     try {
       let voice = null;
       let rate = 1;
       let pitch = 1;
-      
       const savedSettings = localStorage.getItem("settings");
       if (savedSettings) {
         const { selectedVoice, voiceRate, voicePitch } = JSON.parse(savedSettings);
-        if (selectedVoice) {
-          voice = selectedVoice.split('-')[2];
-        }
+        if (selectedVoice) voice = selectedVoice.split('-')[2];
         if (voiceRate) rate = voiceRate;
         if (voicePitch) pitch = voicePitch;
       }
-      
       speak(text, { voice, rate, pitch });
     } catch (error) {
       console.error("Speech synthesis error:", error);
@@ -69,9 +68,7 @@ export function ChatWindow() {
       setInputText(transcript);
       handleSendMessage(transcript);
     },
-    onInterim: (transcript) => {
-      setInputText(transcript);
-    },
+    onInterim: (transcript) => setInputText(transcript),
     onError: (error) => {
       console.error("Speech recognition error:", error);
       toast.error("Speech recognition error. Please try again.");
@@ -90,7 +87,6 @@ export function ChatWindow() {
     toggleVoice
   } = useVoiceControls(startRecognition, stopRecognition, cancelSpeech);
 
-  // Sync voice enabled with settings
   useEffect(() => {
     setIsVoiceEnabled(settings.voice_enabled);
   }, [settings.voice_enabled, setIsVoiceEnabled]);
@@ -107,11 +103,10 @@ export function ChatWindow() {
       setDisplayMessages(formatted);
       initialGreetingRef.current = true;
     } else if (!currentConversation) {
-      // Show initial greeting for new/no conversation
       const initialGreeting: ChatMessageProps = {
-        message: profile?.display_name 
-          ? `Hello ${profile.display_name}! I'm Aurora, your AI assistant. How can I help you today?`
-          : "Hello! I'm Aurora, your AI assistant. How can I help you today?",
+        message: profile?.display_name
+          ? `Hello ${profile.display_name}! I'm Aurora, your AI companion. How can I help you today?`
+          : "Hello! I'm Aurora, your AI companion. How can I help you today?",
         sender: "bot",
         timestamp: new Date(),
         emotion: "happy"
@@ -148,6 +143,11 @@ export function ChatWindow() {
       conversationId = newConv.id;
     }
 
+    // Analyze emotion of user message (non-blocking)
+    analyzeEmotion(messageText).then(emotionResult => {
+      setCurrentEmotionMode(emotionResult.responseMode);
+    });
+
     const userMessage: ChatMessageProps = {
       message: messageText,
       sender: "user",
@@ -158,7 +158,6 @@ export function ChatWindow() {
     setInputText("");
     setIsLoading(true);
 
-    // Save user message to DB
     await addMessage('user', messageText);
 
     // Build messages for API
@@ -168,7 +167,7 @@ export function ChatWindow() {
         role: m.sender === "user" ? "user" as const : "assistant" as const,
         content: m.message
       }));
-    
+
     apiMessages.push({ role: "user", content: messageText });
 
     let assistantContent = "";
@@ -177,13 +176,15 @@ export function ChatWindow() {
       await streamChat({
         messages: apiMessages,
         userName: profile?.display_name || undefined,
+        userId: user?.id,
+        companionMode: settings.companion_mode || 'assistant',
         onDelta: (chunk) => {
           assistantContent += chunk;
           setDisplayMessages(prev => {
             const last = prev[prev.length - 1];
             if (last?.sender === "bot" && !last.isLoading) {
-              return prev.map((m, i) => 
-                i === prev.length - 1 
+              return prev.map((m, i) =>
+                i === prev.length - 1
                   ? { ...m, message: assistantContent }
                   : m
               );
@@ -198,11 +199,19 @@ export function ChatWindow() {
         },
         onDone: async () => {
           setIsLoading(false);
-          // Save assistant message to DB
           if (assistantContent) {
             await addMessage('assistant', assistantContent, 'neutral');
             if (settings.voice_enabled) {
               speakText(assistantContent);
+            }
+
+            // Trigger memory extraction after conversation has enough context (every 6+ messages)
+            if (apiMessages.length >= 5 && settings.memory_depth !== 'minimal') {
+              const fullConversation = [
+                ...apiMessages,
+                { role: 'assistant' as const, content: assistantContent }
+              ];
+              extractMemory(fullConversation, conversationId).catch(console.error);
             }
           }
         },
@@ -229,7 +238,7 @@ export function ChatWindow() {
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
-      
+
       <div className="flex flex-col flex-1 min-w-0">
         <Messages messages={displayMessages} isLoading={isLoading && !isStreaming} />
         <ChatInput

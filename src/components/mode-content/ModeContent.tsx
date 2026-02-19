@@ -1,10 +1,11 @@
 
 import { ChatWindow } from "@/components/ChatWindow";
 import { Dashboard } from "@/components/Dashboard";
-import { EnhancedMemory } from "@/components/EnhancedMemory";
+import { MemoryDashboard } from "@/components/MemoryDashboard";
 import { AgentFramework } from "@/components/AgentFramework";
 import { Multimodal } from "@/components/Multimodal";
 import { PersonaSelector } from "@/components/PersonaSelector";
+import { CompanionModeSelector } from "@/components/CompanionModeSelector";
 import Personas from "@/pages/Personas";
 import VirtualReality from "@/pages/VirtualReality";
 import Settings from "@/pages/Settings";
@@ -18,12 +19,11 @@ export function ModeContent({ activeMode }: ModeContentProps) {
   if (activeMode === "chat") {
     return (
       <>
-        <div className="border-b p-2">
+        <div className="border-b px-3 py-1.5 flex items-center justify-between gap-2">
           <PersonaSelector onSelectPersona={(persona) => {
-            // The actual state change happens inside PersonaSelector 
-            // which stores the selection in localStorage
             console.log(`Index: Persona changed to: ${persona}`);
           }} />
+          <CompanionModeSelector />
         </div>
         <ChatWindow />
       </>
@@ -35,7 +35,11 @@ export function ModeContent({ activeMode }: ModeContentProps) {
   }
   
   if (activeMode === "memory") {
-    return <EnhancedMemory />;
+    return (
+      <div className="flex-1 p-6 overflow-y-auto">
+        <MemoryDashboard />
+      </div>
+    );
   }
   
   if (activeMode === "agents") {
