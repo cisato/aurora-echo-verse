@@ -22,6 +22,7 @@ import Reports from "./pages/Reports";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
+import MemoryPage from "./pages/Memory";
 
 const queryClient = new QueryClient();
 

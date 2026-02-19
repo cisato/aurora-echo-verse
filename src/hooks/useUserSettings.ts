@@ -8,13 +8,19 @@ export interface UserSettings {
   active_persona: string;
   web_search_enabled: boolean;
   preferred_model: string;
+  companion_mode: string;
+  proactive_enabled: boolean;
+  memory_depth: string;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   voice_enabled: true,
   active_persona: 'assistant',
   web_search_enabled: false,
-  preferred_model: 'google/gemini-3-flash-preview'
+  preferred_model: 'google/gemini-3-flash-preview',
+  companion_mode: 'assistant',
+  proactive_enabled: true,
+  memory_depth: 'standard',
 };
 
 export function useUserSettings() {
@@ -44,7 +50,10 @@ export function useUserSettings() {
           voice_enabled: data.voice_enabled ?? DEFAULT_SETTINGS.voice_enabled,
           active_persona: data.active_persona ?? DEFAULT_SETTINGS.active_persona,
           web_search_enabled: data.web_search_enabled ?? DEFAULT_SETTINGS.web_search_enabled,
-          preferred_model: data.preferred_model ?? DEFAULT_SETTINGS.preferred_model
+          preferred_model: data.preferred_model ?? DEFAULT_SETTINGS.preferred_model,
+          companion_mode: (data as any).companion_mode ?? DEFAULT_SETTINGS.companion_mode,
+          proactive_enabled: (data as any).proactive_enabled ?? DEFAULT_SETTINGS.proactive_enabled,
+          memory_depth: (data as any).memory_depth ?? DEFAULT_SETTINGS.memory_depth,
         });
       } else {
         // Create default settings for new user

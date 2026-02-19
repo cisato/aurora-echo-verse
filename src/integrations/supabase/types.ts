@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversation_summaries: {
+        Row: {
+          conversation_id: string | null
+          created_at: string | null
+          decisions_made: string[] | null
+          emotional_tone: string | null
+          id: string
+          key_topics: string[] | null
+          milestones: string[] | null
+          period_type: string | null
+          summary: string
+          unresolved_threads: string[] | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string | null
+          decisions_made?: string[] | null
+          emotional_tone?: string | null
+          id?: string
+          key_topics?: string[] | null
+          milestones?: string[] | null
+          period_type?: string | null
+          summary: string
+          unresolved_threads?: string[] | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string | null
+          decisions_made?: string[] | null
+          emotional_tone?: string | null
+          id?: string
+          key_topics?: string[] | null
+          milestones?: string[] | null
+          period_type?: string | null
+          summary?: string
+          unresolved_threads?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -34,6 +76,75 @@ export type Database = {
           id?: string
           title?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      emotional_patterns: {
+        Row: {
+          context: string | null
+          conversation_id: string | null
+          created_at: string | null
+          emotion: string
+          id: string
+          intensity: number | null
+          polarity: string | null
+          trigger_pattern: string | null
+          user_id: string
+        }
+        Insert: {
+          context?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          emotion: string
+          id?: string
+          intensity?: number | null
+          polarity?: string | null
+          trigger_pattern?: string | null
+          user_id: string
+        }
+        Update: {
+          context?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          emotion?: string
+          id?: string
+          intensity?: number | null
+          polarity?: string | null
+          trigger_pattern?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      identity_evolution: {
+        Row: {
+          created_at: string | null
+          delta: number | null
+          dimension: string
+          evidence: string | null
+          id: string
+          note: string | null
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          delta?: number | null
+          dimension: string
+          evidence?: string | null
+          id?: string
+          note?: string | null
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          delta?: number | null
+          dimension?: string
+          evidence?: string | null
+          id?: string
+          note?: string | null
+          score?: number | null
           user_id?: string
         }
         Relationships: []
@@ -103,12 +214,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_memory: {
+        Row: {
+          category: string
+          confidence: number | null
+          created_at: string | null
+          id: string
+          key: string
+          last_reinforced_at: string | null
+          source: string | null
+          updated_at: string | null
+          user_id: string
+          value: string
+        }
+        Insert: {
+          category: string
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          key: string
+          last_reinforced_at?: string | null
+          source?: string | null
+          updated_at?: string | null
+          user_id: string
+          value: string
+        }
+        Update: {
+          category?: string
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          key?: string
+          last_reinforced_at?: string | null
+          source?: string | null
+          updated_at?: string | null
+          user_id?: string
+          value?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           active_persona: string | null
+          companion_mode: string | null
           created_at: string
           id: string
+          memory_depth: string | null
           preferred_model: string | null
+          proactive_enabled: boolean | null
           updated_at: string
           user_id: string
           voice_enabled: boolean | null
@@ -116,9 +269,12 @@ export type Database = {
         }
         Insert: {
           active_persona?: string | null
+          companion_mode?: string | null
           created_at?: string
           id?: string
+          memory_depth?: string | null
           preferred_model?: string | null
+          proactive_enabled?: boolean | null
           updated_at?: string
           user_id: string
           voice_enabled?: boolean | null
@@ -126,9 +282,12 @@ export type Database = {
         }
         Update: {
           active_persona?: string | null
+          companion_mode?: string | null
           created_at?: string
           id?: string
+          memory_depth?: string | null
           preferred_model?: string | null
+          proactive_enabled?: boolean | null
           updated_at?: string
           user_id?: string
           voice_enabled?: boolean | null
