@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChatInput } from "./ChatInput";
 import { Messages } from "./chat/Messages";
 import { ConversationHistory } from "./ConversationHistory";
+import { ProactiveInsightsBanner } from "./ProactiveInsightsBanner";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { useVoiceControls } from "@/hooks/useVoiceControls";
@@ -240,6 +241,7 @@ export function ChatWindow() {
       />
 
       <div className="flex flex-col flex-1 min-w-0">
+        <ProactiveInsightsBanner />
         <Messages messages={displayMessages} isLoading={isLoading && !isStreaming} />
         <ChatInput
           inputText={inputText}

@@ -14,6 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          monthly_limit: number
+          name: string
+          tier: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          monthly_limit?: number
+          name?: string
+          tier?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          monthly_limit?: number
+          name?: string
+          tier?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      api_usage: {
+        Row: {
+          api_key_id: string
+          created_at: string
+          endpoint: string
+          id: string
+          status_code: number | null
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          api_key_id: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          status_code?: number | null
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          api_key_id?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          status_code?: number | null
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      behavioral_insights: {
+        Row: {
+          acknowledged: boolean | null
+          created_at: string
+          description: string
+          detected_from: string | null
+          id: string
+          pattern_type: string
+          severity: string | null
+          suggestion: string | null
+          user_id: string
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          created_at?: string
+          description: string
+          detected_from?: string | null
+          id?: string
+          pattern_type: string
+          severity?: string | null
+          suggestion?: string | null
+          user_id: string
+        }
+        Update: {
+          acknowledged?: boolean | null
+          created_at?: string
+          description?: string
+          detected_from?: string | null
+          id?: string
+          pattern_type?: string
+          severity?: string | null
+          suggestion?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversation_summaries: {
         Row: {
           conversation_id: string | null
@@ -187,6 +303,45 @@ export type Database = {
           },
         ]
       }
+      proactive_insights: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          insight_type: string
+          is_dismissed: boolean | null
+          is_surfaced: boolean | null
+          message: string
+          priority: number | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          insight_type: string
+          is_dismissed?: boolean | null
+          is_surfaced?: boolean | null
+          message: string
+          priority?: number | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          insight_type?: string
+          is_dismissed?: boolean | null
+          is_surfaced?: boolean | null
+          message?: string
+          priority?: number | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -210,6 +365,51 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ritual_summaries: {
+        Row: {
+          accomplishments: string[] | null
+          created_at: string
+          goals_reviewed: string[] | null
+          growth_highlights: string[] | null
+          id: string
+          intentions: string[] | null
+          mood_trend: string | null
+          period_end: string
+          period_start: string
+          ritual_type: string
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          accomplishments?: string[] | null
+          created_at?: string
+          goals_reviewed?: string[] | null
+          growth_highlights?: string[] | null
+          id?: string
+          intentions?: string[] | null
+          mood_trend?: string | null
+          period_end: string
+          period_start: string
+          ritual_type: string
+          summary: string
+          user_id: string
+        }
+        Update: {
+          accomplishments?: string[] | null
+          created_at?: string
+          goals_reviewed?: string[] | null
+          growth_highlights?: string[] | null
+          id?: string
+          intentions?: string[] | null
+          mood_trend?: string | null
+          period_end?: string
+          period_start?: string
+          ritual_type?: string
+          summary?: string
           user_id?: string
         }
         Relationships: []

@@ -11,8 +11,19 @@ import { toast } from "sonner";
 import {
   Brain, Target, Heart, Flame, Sparkles, BookOpen,
   Trash2, Plus, TrendingUp, TrendingDown, Minus,
-  Activity, User, Lightbulb
+  Activity, User, Lightbulb, AlertTriangle, CalendarDays
 } from "lucide-react";
+import { GrowthTimeline } from "./GrowthTimeline";
+import { BehavioralPatterns } from "./BehavioralPatterns";
+import { RitualDashboard } from "./RitualDashboard";
+
+const DIMENSION_LABELS: Record<string, string> = {
+  openness: "Openness",
+  conscientiousness: "Conscientiousness",
+  extraversion: "Extraversion",
+  agreeableness: "Agreeableness",
+  neuroticism: "Neuroticism",
+};
 
 const CATEGORY_CONFIG: Record<string, { icon: typeof Brain; color: string; label: string }> = {
   goal: { icon: Target, color: "text-green-500", label: "Goals" },
@@ -39,15 +50,6 @@ const EMOTION_COLORS: Record<string, string> = {
   neutral: "bg-muted text-muted-foreground border-border",
 };
 
-const DIMENSION_LABELS: Record<string, string> = {
-  confidence: "Confidence",
-  discipline: "Discipline",
-  emotional_stability: "Emotional Stability",
-  resilience: "Resilience",
-  focus: "Focus",
-  growth_mindset: "Growth Mindset",
-};
-
 export function MemoryDashboard() {
   const {
     fetchMemoryFacts, addMemoryFact, deleteMemoryFact,
@@ -57,10 +59,8 @@ export function MemoryDashboard() {
   const [facts, setFacts] = useState<MemoryFact[]>([]);
   const [summaries, setSummaries] = useState<ConversationSummary[]>([]);
   const [patterns, setPatterns] = useState<EmotionalPattern[]>([]);
-  const [identity, setIdentity] = useState<IdentitySnapshot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // New fact form
   const [newCategory, setNewCategory] = useState("goal");
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
@@ -69,18 +69,16 @@ export function MemoryDashboard() {
 
   const loadAll = useCallback(async () => {
     setIsLoading(true);
-    const [f, s, p, i] = await Promise.all([
+    const [f, s, p] = await Promise.all([
       fetchMemoryFacts(),
       fetchSummaries(10),
       fetchEmotionalPatterns(30),
-      fetchIdentityEvolution(),
     ]);
     setFacts(f);
     setSummaries(s);
     setPatterns(p);
-    setIdentity(i);
     setIsLoading(false);
-  }, [fetchMemoryFacts, fetchSummaries, fetchEmotionalPatterns, fetchIdentityEvolution]);
+  }, [fetchMemoryFacts, fetchSummaries, fetchEmotionalPatterns]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -114,21 +112,12 @@ export function MemoryDashboard() {
     }
   };
 
-  // Group facts by category
   const factsByCategory = facts.reduce((acc, fact) => {
     if (!acc[fact.category]) acc[fact.category] = [];
     acc[fact.category].push(fact);
     return acc;
   }, {} as Record<string, MemoryFact[]>);
 
-  // Get latest identity scores per dimension
-  const latestIdentity = Object.keys(DIMENSION_LABELS).reduce((acc, dim) => {
-    const snapshots = identity.filter(i => i.dimension === dim);
-    if (snapshots.length > 0) acc[dim] = snapshots[0];
-    return acc;
-  }, {} as Record<string, IdentitySnapshot>);
-
-  // Emotion frequency
   const emotionFreq = patterns.reduce((acc, p) => {
     acc[p.emotion] = (acc[p.emotion] || 0) + 1;
     return acc;
@@ -170,21 +159,10 @@ export function MemoryDashboard() {
               <SelectContent>
                 {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
                   <SelectItem key={key} value={key} className="text-xs">{cfg.label}</SelectItem>
-                ))}
-              </SelectContent>
+                ))}</SelectContent>
             </Select>
-            <Input
-              placeholder="Label (e.g. 'Main goal')"
-              className="h-8 text-xs flex-1 min-w-32"
-              value={newKey}
-              onChange={e => setNewKey(e.target.value)}
-            />
-            <Input
-              placeholder="Value (e.g. 'Build a profitable trading system')"
-              className="h-8 text-xs flex-[2] min-w-48"
-              value={newValue}
-              onChange={e => setNewValue(e.target.value)}
-            />
+            <Input placeholder="Label" className="h-8 text-xs flex-1 min-w-32" value={newKey} onChange={e => setNewKey(e.target.value)} />
+            <Input placeholder="Value" className="h-8 text-xs flex-[2] min-w-48" value={newValue} onChange={e => setNewValue(e.target.value)} />
             <Button size="sm" className="h-8" onClick={handleAddFact} disabled={isAdding}>
               {isAdding ? "Saving..." : "Save"}
             </Button>
@@ -196,8 +174,10 @@ export function MemoryDashboard() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="knowledge">Knowledge Graph</TabsTrigger>
           <TabsTrigger value="emotional">Emotional Patterns</TabsTrigger>
-          <TabsTrigger value="identity">Identity Evolution</TabsTrigger>
-          <TabsTrigger value="episodes">Episode Memory</TabsTrigger>
+          <TabsTrigger value="growth">Growth Timeline</TabsTrigger>
+          <TabsTrigger value="behavioral">Behavioral Intel</TabsTrigger>
+          <TabsTrigger value="rituals">Rituals</TabsTrigger>
+          <TabsTrigger value="episodes">Episodes</TabsTrigger>
         </TabsList>
 
         {/* Knowledge Graph */}
@@ -206,9 +186,7 @@ export function MemoryDashboard() {
             <Card className="p-8 text-center border-dashed">
               <Brain className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="font-medium">No memories yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Aurora will learn about you as you chat, or you can add memories manually.
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">Aurora will learn about you as you chat.</p>
             </Card>
           ) : (
             Object.entries(factsByCategory).map(([category, catFacts]) => {
@@ -228,19 +206,9 @@ export function MemoryDashboard() {
                           <span className="text-xs font-medium text-muted-foreground">{fact.key}: </span>
                           <span className="text-sm">{fact.value}</span>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="text-xs text-muted-foreground hidden group-hover:block">
-                            {Math.round(fact.confidence * 100)}%
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(fact.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => handleDelete(fact.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -256,7 +224,6 @@ export function MemoryDashboard() {
             <Card className="p-8 text-center border-dashed">
               <Heart className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="font-medium">No emotional patterns yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Aurora tracks emotional patterns across conversations.</p>
             </Card>
           ) : (
             <>
@@ -265,28 +232,21 @@ export function MemoryDashboard() {
                 <div className="space-y-3">
                   {topEmotions.map(([emotion, count]) => (
                     <div key={emotion} className="flex items-center gap-3">
-                      <Badge className={`text-xs w-24 justify-center ${EMOTION_COLORS[emotion] || EMOTION_COLORS.neutral}`}>
-                        {emotion}
-                      </Badge>
+                      <Badge className={`text-xs w-24 justify-center ${EMOTION_COLORS[emotion] || EMOTION_COLORS.neutral}`}>{emotion}</Badge>
                       <Progress value={(count / patterns.length) * 100} className="flex-1 h-2" />
                       <span className="text-xs text-muted-foreground w-8 text-right">{count}x</span>
                     </div>
                   ))}
                 </div>
               </Card>
-
               <Card className="p-4">
-                <h3 className="font-medium mb-3 text-sm">Recent Emotional Events</h3>
+                <h3 className="font-medium mb-3 text-sm">Recent Events</h3>
                 <div className="space-y-2">
                   {patterns.slice(0, 8).map(p => (
                     <div key={p.id} className="flex items-start gap-2 p-2 rounded-lg bg-muted/20">
-                      <Badge className={`text-xs shrink-0 ${EMOTION_COLORS[p.emotion] || EMOTION_COLORS.neutral}`}>
-                        {p.emotion}
-                      </Badge>
+                      <Badge className={`text-xs shrink-0 ${EMOTION_COLORS[p.emotion] || EMOTION_COLORS.neutral}`}>{p.emotion}</Badge>
                       <span className="text-xs text-muted-foreground flex-1">{p.context || "No context"}</span>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {new Date(p.created_at).toLocaleDateString()}
-                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">{new Date(p.created_at).toLocaleDateString()}</span>
                     </div>
                   ))}
                 </div>
@@ -295,48 +255,19 @@ export function MemoryDashboard() {
           )}
         </TabsContent>
 
-        {/* Identity Evolution */}
-        <TabsContent value="identity" className="space-y-4 mt-4">
-          {Object.keys(latestIdentity).length === 0 ? (
-            <Card className="p-8 text-center border-dashed">
-              <TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="font-medium">No identity signals yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Aurora tracks your growth across key dimensions.</p>
-            </Card>
-          ) : (
-            <Card className="p-4">
-              <h3 className="font-medium mb-4 text-sm">Identity Dimensions</h3>
-              <div className="space-y-4">
-                {Object.entries(DIMENSION_LABELS).map(([dim, label]) => {
-                  const snapshot = latestIdentity[dim];
-                  if (!snapshot) return null;
-                  const score = snapshot.score;
-                  const delta = snapshot.delta;
-                  return (
-                    <div key={dim}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-sm font-medium">{label}</span>
-                        <div className="flex items-center gap-2">
-                          {delta > 0 ? (
-                            <TrendingUp className="h-3.5 w-3.5 text-green-500" />
-                          ) : delta < 0 ? (
-                            <TrendingDown className="h-3.5 w-3.5 text-red-500" />
-                          ) : (
-                            <Minus className="h-3.5 w-3.5 text-muted-foreground" />
-                          )}
-                          <span className="text-sm font-semibold">{score.toFixed(1)}/10</span>
-                        </div>
-                      </div>
-                      <Progress value={score * 10} className="h-2" />
-                      {snapshot.note && (
-                        <p className="text-xs text-muted-foreground mt-1 italic">"{snapshot.note}"</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          )}
+        {/* Growth Timeline */}
+        <TabsContent value="growth" className="mt-4">
+          <GrowthTimeline />
+        </TabsContent>
+
+        {/* Behavioral Intelligence */}
+        <TabsContent value="behavioral" className="mt-4">
+          <BehavioralPatterns />
+        </TabsContent>
+
+        {/* Rituals */}
+        <TabsContent value="rituals" className="mt-4">
+          <RitualDashboard />
         </TabsContent>
 
         {/* Episodic Memory */}
@@ -345,15 +276,12 @@ export function MemoryDashboard() {
             <Card className="p-8 text-center border-dashed">
               <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="font-medium">No episode summaries yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Aurora creates summaries of your conversations after meaningful exchanges.</p>
             </Card>
           ) : (
             summaries.map(s => (
               <Card key={s.id} className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <Badge className={`text-xs ${EMOTION_COLORS[s.emotional_tone] || EMOTION_COLORS.neutral}`}>
-                    {s.emotional_tone}
-                  </Badge>
+                  <Badge className={`text-xs ${EMOTION_COLORS[s.emotional_tone] || EMOTION_COLORS.neutral}`}>{s.emotional_tone}</Badge>
                   <span className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</span>
                 </div>
                 <p className="text-sm mb-3">{s.summary}</p>
@@ -362,22 +290,6 @@ export function MemoryDashboard() {
                     <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
                   ))}
                 </div>
-                {s.decisions_made?.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs font-medium text-muted-foreground">Decisions made:</p>
-                    {s.decisions_made.map((d, i) => (
-                      <p key={i} className="text-xs mt-0.5">• {d}</p>
-                    ))}
-                  </div>
-                )}
-                {s.unresolved_threads?.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs font-medium text-amber-600">Open threads:</p>
-                    {s.unresolved_threads.map((t, i) => (
-                      <p key={i} className="text-xs mt-0.5 text-amber-600/80">• {t}</p>
-                    ))}
-                  </div>
-                )}
               </Card>
             ))
           )}
