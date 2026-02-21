@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AuroraAvatar } from "./AuroraAvatar";
-import { MessageCircle, LayoutDashboard, Brain, Settings2, Bot, Image, User, Glasses, FileText } from "lucide-react";
+import { MessageCircle, LayoutDashboard, Brain, Settings2, Bot, Image, User, Glasses, FileText, Key } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
@@ -59,6 +59,7 @@ export function Sidebar({ onModeChange, activeMode }: SidebarProps) {
     { name: "Personas", icon: User, mode: "personas" },
     { name: "Virtual Reality", icon: Glasses, mode: "vr" },
     { name: "Reports", icon: FileText, mode: "reports" },
+    { name: "API Keys", icon: Key, mode: "api-keys" },
     { name: "Settings", icon: Settings2, mode: "settings" }
   ];
 
