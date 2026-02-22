@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Copy, Plus, Trash2, Key, Eye, EyeOff, Zap, Crown, Building2, ArrowLeft } from "lucide-react";
+import { Copy, Plus, Trash2, Key, Eye, EyeOff, Zap, Crown, Building2, ArrowLeft, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -194,6 +194,10 @@ export default function ApiKeys() {
       {/* Keys List */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Your API Keys</h2>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate("/api-analytics")}>
+            <BarChart3 className="h-4 w-4 mr-2" />Analytics
+          </Button>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm"><Plus className="h-4 w-4 mr-2" />Create Key</Button>
@@ -224,6 +228,7 @@ export default function ApiKeys() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
