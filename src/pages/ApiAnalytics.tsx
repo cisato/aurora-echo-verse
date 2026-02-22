@@ -5,9 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, BarChart3, TrendingUp, AlertTriangle, DollarSign, Activity, Clock } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, BarChart3, TrendingUp, AlertTriangle, DollarSign, Activity, Clock, ChevronDown, Wifi } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface UsageRow {
   id: string;
@@ -42,6 +43,13 @@ export default function ApiAnalytics() {
   const [selectedKey, setSelectedKey] = useState<string>("all");
   const [timeRange, setTimeRange] = useState<string>("30d");
   const [isLoading, setIsLoading] = useState(true);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+
+  // Collapsible states
+  const [volumeOpen, setVolumeOpen] = useState(true);
+  const [endpointsOpen, setEndpointsOpen] = useState(true);
+  const [keyBreakdownOpen, setKeyBreakdownOpen] = useState(true);
+  const [errorsOpen, setErrorsOpen] = useState(true);
 
   const startDate = useMemo(() => {
     const d = new Date();
@@ -66,6 +74,40 @@ export default function ApiAnalytics() {
   }, [user, startDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("api-usage-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "api_usage",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newRow = payload.new as UsageRow;
+          // Only add if within current time range
+          if (new Date(newRow.created_at) >= new Date(startDate)) {
+            setUsage((prev) => {
+              if (prev.some((r) => r.id === newRow.id)) return prev;
+              return [...prev, newRow];
+            });
+          }
+        }
+      )
+      .subscribe((status) => {
+        setRealtimeConnected(status === "SUBSCRIBED");
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, startDate]);
 
   const filtered = useMemo(() =>
     selectedKey === "all" ? usage : usage.filter(u => u.api_key_id === selectedKey),
@@ -127,7 +169,7 @@ export default function ApiAnalytics() {
   }, [filtered]);
 
   // --- Per-key breakdown ---
-  const keyBreakdown = useMemo(() => {
+  const keyBreakdownData = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const row of filtered) {
       counts[row.api_key_id] = (counts[row.api_key_id] || 0) + 1;
@@ -145,6 +187,18 @@ export default function ApiAnalytics() {
     { label: "Est. Cost", value: `$${costEstimate}`, icon: DollarSign, color: "text-primary" },
   ];
 
+  const SectionHeader = ({ title, icon: Icon, open, onToggle, iconColor = "text-primary" }: { title: string; icon: React.ElementType; open: boolean; onToggle: () => void; iconColor?: string }) => (
+    <CollapsibleTrigger asChild onClick={onToggle}>
+      <button className="flex items-center justify-between w-full text-sm font-semibold hover:opacity-80 transition-opacity">
+        <span className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${iconColor}`} />
+          {title}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`} />
+      </button>
+    </CollapsibleTrigger>
+  );
+
   return (
     <div className="flex-1 p-6 overflow-y-auto max-w-5xl mx-auto space-y-6">
       {/* Header */}
@@ -159,6 +213,11 @@ export default function ApiAnalytics() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {realtimeConnected && (
+            <Badge variant="outline" className="text-xs gap-1">
+              <Wifi className="h-3 w-3 text-green-500" /> Live
+            </Badge>
+          )}
           <Select value={selectedKey} onValueChange={setSelectedKey}>
             <SelectTrigger className="w-[180px]"><SelectValue placeholder="All Keys" /></SelectTrigger>
             <SelectContent>
@@ -198,101 +257,111 @@ export default function ApiAnalytics() {
             ))}
           </div>
 
-          {/* Volume Over Time */}
-          <Card className="p-6">
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" /> Request Volume Over Time
-            </h2>
-            {volumeData.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No data for this period</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={volumeData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                  />
-                  <Line type="monotone" dataKey="requests" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="errors" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </Card>
+          {/* Volume Over Time - Collapsible */}
+          <Collapsible open={volumeOpen} onOpenChange={setVolumeOpen}>
+            <Card className="p-6">
+              <SectionHeader title="Request Volume Over Time" icon={Clock} open={volumeOpen} onToggle={() => setVolumeOpen(!volumeOpen)} />
+              <CollapsibleContent className="mt-4">
+                {volumeData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No data for this period</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <LineChart data={volumeData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                      <Line type="monotone" dataKey="requests" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="errors" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Top Endpoints */}
-            <Card className="p-6">
-              <h2 className="text-sm font-semibold mb-4">Top Endpoints</h2>
-              {endpointData.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No data</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={endpointData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={80} stroke="hsl(var(--muted-foreground))" />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-                    <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </Card>
+            {/* Top Endpoints - Collapsible */}
+            <Collapsible open={endpointsOpen} onOpenChange={setEndpointsOpen}>
+              <Card className="p-6">
+                <SectionHeader title="Top Endpoints" icon={BarChart3} open={endpointsOpen} onToggle={() => setEndpointsOpen(!endpointsOpen)} />
+                <CollapsibleContent className="mt-4">
+                  {endpointData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">No data</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={endpointData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={80} stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                        <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
-            {/* Per-Key Breakdown */}
-            <Card className="p-6">
-              <h2 className="text-sm font-semibold mb-4">Usage by Key</h2>
-              {keyBreakdown.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No data</p>
-              ) : (
-                <div className="space-y-3">
-                  {keyBreakdown.map((item, i) => {
-                    const maxReq = keyBreakdown[0]?.requests || 1;
-                    const pct = (item.requests / maxReq) * 100;
-                    return (
-                      <div key={item.name}>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-medium truncate max-w-[60%]">{item.name}</span>
-                          <span className="text-muted-foreground">{item.requests.toLocaleString()}</span>
-                        </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full"
-                            style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
+            {/* Per-Key Breakdown - Collapsible */}
+            <Collapsible open={keyBreakdownOpen} onOpenChange={setKeyBreakdownOpen}>
+              <Card className="p-6">
+                <SectionHeader title="Usage by Key" icon={Activity} open={keyBreakdownOpen} onToggle={() => setKeyBreakdownOpen(!keyBreakdownOpen)} />
+                <CollapsibleContent className="mt-4">
+                  {keyBreakdownData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">No data</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {keyBreakdownData.map((item, i) => {
+                        const maxReq = keyBreakdownData[0]?.requests || 1;
+                        const pct = (item.requests / maxReq) * 100;
+                        return (
+                          <div key={item.name}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="font-medium truncate max-w-[60%]">{item.name}</span>
+                              <span className="text-muted-foreground">{item.requests.toLocaleString()}</span>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           </div>
 
-          {/* Error breakdown */}
+          {/* Error breakdown - Collapsible */}
           {errorCount > 0 && (
-            <Card className="p-6">
-              <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive" /> Error Breakdown
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {Object.entries(
-                  filtered
-                    .filter(u => u.status_code && u.status_code >= 400)
-                    .reduce<Record<string, number>>((acc, u) => {
-                      const code = String(u.status_code);
-                      acc[code] = (acc[code] || 0) + 1;
-                      return acc;
-                    }, {})
-                ).sort((a, b) => b[1] - a[1]).map(([code, count]) => (
-                  <div key={code} className="flex items-center gap-2 p-3 bg-destructive/5 rounded-lg">
-                    <Badge variant="destructive" className="text-xs">{code}</Badge>
-                    <span className="text-sm font-medium">{count} requests</span>
+            <Collapsible open={errorsOpen} onOpenChange={setErrorsOpen}>
+              <Card className="p-6">
+                <SectionHeader title="Error Breakdown" icon={AlertTriangle} open={errorsOpen} onToggle={() => setErrorsOpen(!errorsOpen)} iconColor="text-destructive" />
+                <CollapsibleContent className="mt-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {Object.entries(
+                      filtered
+                        .filter(u => u.status_code && u.status_code >= 400)
+                        .reduce<Record<string, number>>((acc, u) => {
+                          const code = String(u.status_code);
+                          acc[code] = (acc[code] || 0) + 1;
+                          return acc;
+                        }, {})
+                    ).sort((a, b) => b[1] - a[1]).map(([code, count]) => (
+                      <div key={code} className="flex items-center gap-2 p-3 bg-destructive/5 rounded-lg">
+                        <Badge variant="destructive" className="text-xs">{code}</Badge>
+                        <span className="text-sm font-medium">{count} requests</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </Card>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           )}
         </>
       )}
