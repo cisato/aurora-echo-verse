@@ -24,6 +24,7 @@ import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
 import MemoryPage from "./pages/Memory";
 import ApiKeys from "./pages/ApiKeys";
+import ApiAnalytics from "./pages/ApiAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,11 @@ const App = () => (
                 <Route path="/api-keys" element={
                   <ProtectedRoute>
                     <ApiKeys />
+                  </ProtectedRoute>
+                } />
+                <Route path="/api-analytics" element={
+                  <ProtectedRoute>
+                    <ApiAnalytics />
                   </ProtectedRoute>
                 } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
