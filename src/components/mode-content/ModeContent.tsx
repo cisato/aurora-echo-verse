@@ -2,15 +2,14 @@
 import { ChatWindow } from "@/components/ChatWindow";
 import { Dashboard } from "@/components/Dashboard";
 import { MemoryDashboard } from "@/components/MemoryDashboard";
-import { AgentFramework } from "@/components/AgentFramework";
 import { Multimodal } from "@/components/Multimodal";
 import { PersonaSelector } from "@/components/PersonaSelector";
 import { CompanionModeSelector } from "@/components/CompanionModeSelector";
 import Personas from "@/pages/Personas";
-import VirtualReality from "@/pages/VirtualReality";
 import Settings from "@/pages/Settings";
 import Reports from "@/pages/Reports";
 import ApiKeys from "@/pages/ApiKeys";
+import ApiAnalytics from "@/pages/ApiAnalytics";
 
 interface ModeContentProps {
   activeMode: string;
@@ -43,10 +42,6 @@ export function ModeContent({ activeMode }: ModeContentProps) {
     );
   }
   
-  if (activeMode === "agents") {
-    return <AgentFramework />;
-  }
-  
   if (activeMode === "multimodal") {
     return <Multimodal />;
   }
@@ -55,16 +50,16 @@ export function ModeContent({ activeMode }: ModeContentProps) {
     return <Personas />;
   }
   
-  if (activeMode === "vr") {
-    return <VirtualReality />;
-  }
-  
   if (activeMode === "reports") {
     return <Reports />;
   }
   
   if (activeMode === "api-keys") {
     return <ApiKeys />;
+  }
+  
+  if (activeMode === "api-analytics") {
+    return <ApiAnalytics />;
   }
   
   if (activeMode === "settings") {
