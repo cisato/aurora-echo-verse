@@ -14,10 +14,8 @@ import Search from "./pages/Search";
 import Code from "./pages/Code";
 import Web from "./pages/Web";
 import NotFound from "./pages/NotFound";
-import { AgentFramework } from "./components/AgentFramework";
 import { Multimodal } from "./components/Multimodal";
 import Personas from "./pages/Personas";
-import VirtualReality from "./pages/VirtualReality";
 import Reports from "./pages/Reports";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
@@ -75,11 +73,6 @@ const App = () => (
                     <Web />
                   </ProtectedRoute>
                 } />
-                <Route path="/agents" element={
-                  <ProtectedRoute>
-                    <AgentFramework />
-                  </ProtectedRoute>
-                } />
                 <Route path="/multimodal" element={
                   <ProtectedRoute>
                     <Multimodal />
@@ -88,11 +81,6 @@ const App = () => (
                 <Route path="/personas" element={
                   <ProtectedRoute>
                     <Personas />
-                  </ProtectedRoute>
-                } />
-                <Route path="/vr" element={
-                  <ProtectedRoute>
-                    <VirtualReality />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports" element={

@@ -13,8 +13,11 @@ import { usePlatform } from "@/hooks/use-platform";
 import { useElevenLabs } from "@/hooks/useElevenLabs";
 import { getWeatherData } from "@/utils/searchUtils";
 import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const Settings = () => {
+  const { user } = useAuth();
   const [apiKey, setApiKey] = useState("");
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [selectedVoice, setSelectedVoice] = useState("en-US-AriaNeural");
@@ -89,7 +92,7 @@ const Settings = () => {
     fetchVoices();
   }, [elevenLabsApiKey, elevenLabsEnabled, elevenLabs]);
   
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     // Save all settings to localStorage
     localStorage.setItem("settings", JSON.stringify({
       apiKey,
@@ -106,6 +109,17 @@ const Settings = () => {
       newsApiKey,
       webSearchEnabled
     }));
+
+    // Sync key settings to database
+    if (user) {
+      await supabase.from("user_settings").upsert({
+        user_id: user.id,
+        voice_enabled: voiceEnabled,
+        web_search_enabled: webSearchEnabled,
+        preferred_model: modelPreference === "auto" ? "google/gemini-3-flash-preview" : modelPreference,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" });
+    }
     
     toast.success("Settings saved successfully");
   };

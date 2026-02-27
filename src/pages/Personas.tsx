@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const availableLanguages = [
   { code: "en", name: "English" },
@@ -23,6 +25,7 @@ const availableLanguages = [
 ];
 
 export default function Personas() {
+  const { user } = useAuth();
   const [personas, setPersonas] = useState<any[]>([]);
   const [editingPersona, setEditingPersona] = useState<any>(null);
   const [preferredLanguage, setPreferredLanguage] = useState("en");
@@ -113,9 +116,17 @@ export default function Personas() {
             <h2 className="text-xl font-bold mb-4">Current Persona</h2>
             <Card className="p-4">
               <PersonaSelector
-                onSelectPersona={(personaId) => {
+                onSelectPersona={async (personaId) => {
                   console.log(`Selected persona: ${personaId}`);
                   toast.success(`Persona changed to ${personas.find(p => p.id === personaId)?.name || 'Default'}`);
+                  // Sync to database
+                  if (user) {
+                    await supabase.from("user_settings").upsert({
+                      user_id: user.id,
+                      active_persona: personaId,
+                      updated_at: new Date().toISOString(),
+                    }, { onConflict: "user_id" });
+                  }
                 }}
               />
             </Card>
