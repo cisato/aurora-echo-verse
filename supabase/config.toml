@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.daily-summary]
 verify_jwt = false
+
+[functions.multimodal]
+verify_jwt = false
+
+[functions.send-report-email]
+verify_jwt = false
