@@ -1,5 +1,5 @@
 
-import { Brain, CloudSun, Code, Globe, MessageCircle, Mic, Search, Settings as SettingsIcon, Bot, Image, User, Glasses } from "lucide-react";
+import { Brain, CloudSun, Code, Globe, MessageCircle, Mic, Search, Settings as SettingsIcon, Image, User, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -23,10 +23,10 @@ export function QuickActions({ onAction }: QuickActionProps) {
     { name: "Code", icon: Code, color: "bg-aurora-green", action: "code" },
     { name: "Web", icon: Globe, color: "bg-aurora-cyan", action: "web" },
     { name: "Memory", icon: Brain, color: "bg-aurora-purple", action: "memory" },
-    { name: "Agents", icon: Bot, color: "bg-aurora-pink", action: "agents" },
     { name: "Multimodal", icon: Image, color: "bg-aurora-blue", action: "multimodal" },
     { name: "Personas", icon: User, color: "bg-aurora-orange", action: "personas" },
-    { name: "VR/AR", icon: Glasses, color: "bg-aurora-cyan", action: "vr" },
+    { name: "Reports", icon: FileText, color: "bg-aurora-pink", action: "reports" },
+    { name: "Settings", icon: SettingsIcon, color: "bg-gray-500", action: "settings" },
     { name: "Settings", icon: SettingsIcon, color: "bg-gray-500", action: "settings" },
   ];
   

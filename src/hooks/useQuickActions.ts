@@ -44,20 +44,14 @@ export const useQuickActions = (chatState: UseChatState) => {
         // Use custom event to communicate with parent component
         window.dispatchEvent(new CustomEvent('setMode', { detail: { mode: "memory" } }));
         break;
-      case "agents":
-        navigate("/agents");
-        break;
       case "multimodal":
-        navigate("/multimodal");
+        window.dispatchEvent(new CustomEvent('setMode', { detail: { mode: "multimodal" } }));
         break;
       case "personas":
-        navigate("/personas");
-        break;
-      case "vr":
-        navigate("/vr");
+        window.dispatchEvent(new CustomEvent('setMode', { detail: { mode: "personas" } }));
         break;
       case "reports":
-        navigate("/reports");
+        window.dispatchEvent(new CustomEvent('setMode', { detail: { mode: "reports" } }));
         break;
       case "settings":
         navigate("/settings");
