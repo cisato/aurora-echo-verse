@@ -257,8 +257,40 @@ export default function Reports() {
     toast.success("Report deleted");
   };
 
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
   const handleEmailReport = async (report: GeneratedReport) => {
-    toast.info("Email delivery for reports requires a third-party email service (e.g., Resend, SendGrid). Currently, reports can be downloaded directly.");
+    if (!user?.email) {
+      toast.error("No email address found. Please update your profile.");
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-report-email", {
+        body: {
+          to: user.email,
+          reportType: report.type,
+          reportData: report.data,
+          dateRange: report.dateRange,
+          format: report.format,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`Report emailed to ${user.email}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      if (msg.includes("not configured")) {
+        toast.error("Email service not configured yet. Please ask your admin to add the Resend API key.");
+      } else {
+        toast.error(`Failed to send email: ${msg}`);
+      }
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   return (
@@ -419,8 +451,8 @@ export default function Reports() {
                         <Button variant="outline" size="sm" onClick={() => handleExport(report)}>
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleEmailReport(report)}>
-                          <Mail className="h-4 w-4" />
+                        <Button variant="outline" size="sm" onClick={() => handleEmailReport(report)} disabled={isSendingEmail}>
+                          {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteReport(report.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
