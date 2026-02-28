@@ -23,8 +23,8 @@ export function WelcomeAlert({ onDismiss, onQuickAction }: WelcomeAlertProps) {
           Welcome to Aurora AI Assistant 3.0
         </AlertTitle>
         <AlertDescription className="text-sm">
-          This is an enhanced version of Aurora with improved memory system, agent framework, multimodal capabilities, and multilingual persona support.
-          Explore different personas, try voice commands, and check out the advanced features.
+          This is an enhanced version of Aurora with improved memory system, multimodal capabilities, and multilingual persona support.
+          Explore different personas, try voice commands, generate reports, and check out the advanced features.
         </AlertDescription>
         
         <div className="mt-4 flex flex-wrap gap-2">
@@ -34,8 +34,8 @@ export function WelcomeAlert({ onDismiss, onQuickAction }: WelcomeAlertProps) {
           <Button size="sm" variant="outline" onClick={() => onQuickAction("weather")}>
             Check weather
           </Button>
-          <Button size="sm" variant="outline" onClick={() => onQuickAction("agents")}>
-            Explore agents
+          <Button size="sm" variant="outline" onClick={() => onQuickAction("multimodal")}>
+            Try multimodal
           </Button>
           <Button size="sm" variant="outline" onClick={() => onQuickAction("personas")}>
             Try personas
