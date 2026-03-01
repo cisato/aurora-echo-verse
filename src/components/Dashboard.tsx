@@ -11,56 +11,63 @@ import { AgentStatusCard } from "./dashboard/AgentStatusCard";
 import { MultimodalCapabilitiesCard } from "./dashboard/MultimodalCapabilitiesCard";
 import { DashboardSettings } from "./dashboard/DashboardSettings";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
+import { useProfile } from "@/hooks/useProfile";
+import { Activity, Cpu, Sparkles } from "lucide-react";
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { widgets } = useDashboardWidgets();
+  const { profile } = useProfile();
   
   const handleQuickAction = (action: string) => {
     switch(action) {
       case "chat":
         navigate("/chat");
-        toast.success("Navigating to chat page");
         break;
       case "voice":
         window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
         break;
       case "search":
         navigate("/search");
-        toast.success("Navigating to search page");
         break;
       case "weather":
         navigate("/weather");
-        toast.success("Navigating to weather page");
         break;
       case "code":
         navigate("/code");
-        toast.success("Navigating to code page");
         break;
       case "web":
         navigate("/web");
-        toast.success("Navigating to web page");
         break;
       case "settings":
         navigate("/settings");
-        toast.success("Navigating to settings page");
         break;
       case "memory":
         window.dispatchEvent(new CustomEvent('quickAction', { detail: { action: "memory" } }));
-        toast.success("Opening memory page");
+        break;
+      case "multimodal":
+        window.dispatchEvent(new CustomEvent('setMode', { detail: { mode: "multimodal" } }));
+        break;
+      case "personas":
+        window.dispatchEvent(new CustomEvent('setMode', { detail: { mode: "personas" } }));
+        break;
+      case "reports":
+        window.dispatchEvent(new CustomEvent('setMode', { detail: { mode: "reports" } }));
         break;
       case "reminders":
-        window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
-        break;
-      case "joke":
-      case "help":
-      case "today":
         window.dispatchEvent(new CustomEvent('quickAction', { detail: { action } }));
         break;
       default:
         toast.info(`Action '${action}' not implemented yet`);
         break;
     }
+  };
+
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
   };
 
   const statusCards = [
@@ -77,30 +84,57 @@ export function Dashboard() {
   ].filter(Boolean);
   
   return (
-    <div className="p-6 overflow-auto">
+    <div className="p-6 overflow-auto max-w-7xl mx-auto">
+      {/* Header */}
       <header className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
-          <p className="text-muted-foreground">Here's your AI assistant status and activity</p>
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <span className="text-xs font-medium text-primary uppercase tracking-wider">Aurora AI</span>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {greeting()}{profile?.display_name ? `, ${profile.display_name}` : ""}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Your intelligent companion is ready to assist.</p>
         </div>
         <DashboardSettings />
       </header>
-      
+
+      {/* System Overview */}
       {statusCards.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {statusCards}
-        </div>
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">System Overview</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {statusCards}
+          </div>
+        </section>
       )}
       
-      {widgets.quickActions && <QuickActions onAction={handleQuickAction} />}
+      {/* Quick Actions */}
+      {widgets.quickActions && (
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Cpu className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Actions</h2>
+          </div>
+          <QuickActions onAction={handleQuickAction} />
+        </section>
+      )}
       
+      {/* Subsystems */}
       {systemCards.length > 0 && (
-        <>
-          <h2 className="text-xl font-bold mb-4">System Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Subsystems</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {systemCards}
           </div>
-        </>
+        </section>
       )}
     </div>
   );

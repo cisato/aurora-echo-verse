@@ -15,7 +15,7 @@ export function Messages({ messages, isLoading }: MessagesProps) {
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex-1 overflow-y-auto px-4 py-6 space-y-5">
       {messages.map((msg, index) => (
         <ChatMessage key={index} {...msg} />
       ))}

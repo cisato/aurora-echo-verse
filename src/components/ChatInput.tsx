@@ -1,7 +1,8 @@
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Mic, Send, Volume, VolumeX, XCircle } from "lucide-react";
+import { Mic, Send, Volume2, VolumeX, XCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useRef, useEffect } from "react";
 
 interface ChatInputProps {
   inputText: string;
@@ -24,52 +25,66 @@ export function ChatInput({
   isVoiceEnabled,
   isTalking
 }: ChatInputProps) {
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+    }
+  }, [inputText]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       onSend();
     }
   };
 
   return (
     <div className="border-t bg-background/80 backdrop-blur-sm p-4">
-      <div className="flex space-x-2">
+      <div className="max-w-3xl mx-auto flex items-end gap-2">
         <Button 
           size="icon" 
-          variant={isRecording ? "destructive" : "outline"} 
-          className={`rounded-full ${isRecording ? "animate-pulse" : ""}`} 
+          variant={isRecording ? "destructive" : "ghost"} 
+          className={`rounded-full h-9 w-9 shrink-0 ${isRecording ? "animate-pulse" : ""}`} 
           onClick={onToggleRecording}
         >
-          {isRecording ? <XCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          {isRecording ? <XCircle className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
         </Button>
         
-        <Input
-          value={inputText}
-          onChange={(e) => onInputChange(e.target.value)}
-          onKeyDown={handleKeyPress}
-          placeholder="Ask Aurora anything..."
-          className="rounded-full bg-secondary/50"
-        />
-        
+        <div className="flex-1 relative">
+          <Textarea
+            ref={textareaRef}
+            value={inputText}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Message Aurora..."
+            className="min-h-[40px] max-h-[120px] resize-none rounded-2xl bg-muted/50 border-border/40 pr-10 text-sm py-2.5 px-4"
+            rows={1}
+          />
+        </div>
+
         <Button 
           size="icon" 
-          variant="outline"
-          className="rounded-full" 
+          variant="ghost"
+          className="rounded-full h-9 w-9 shrink-0" 
           onClick={onToggleVoice}
         >
           {isVoiceEnabled ? (
-            isTalking ? <Volume className="h-5 w-5" /> : <Volume className="h-5 w-5" />
+            <Volume2 className="h-4 w-4" />
           ) : (
-            <VolumeX className="h-5 w-5" />
+            <VolumeX className="h-4 w-4 text-muted-foreground" />
           )}
         </Button>
         
         <Button 
           size="icon" 
-          className="rounded-full" 
+          className="rounded-full h-9 w-9 shrink-0" 
           onClick={onSend}
           disabled={!inputText.trim()}
         >
-          <Send className="h-5 w-5" />
+          <Send className="h-4 w-4" />
         </Button>
       </div>
     </div>
