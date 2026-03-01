@@ -1,4 +1,5 @@
-import { Settings2 } from "lucide-react";
+import { useState } from "react";
+import { Settings2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -12,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useDashboardWidgets, DashboardWidgets } from "@/hooks/useDashboardWidgets";
+import { toast } from "sonner";
 
 const WIDGET_LABELS: Record<keyof DashboardWidgets, { label: string; description: string }> = {
   auroraStatus: { label: "Aurora Status", description: "AI assistant status and activity" },
@@ -26,9 +28,15 @@ const WIDGET_LABELS: Record<keyof DashboardWidgets, { label: string; description
 
 export function DashboardSettings() {
   const { widgets, toggleWidget, enableAll, disableAll } = useDashboardWidgets();
+  const [open, setOpen] = useState(false);
+
+  const handleSave = () => {
+    toast.success("Dashboard settings saved successfully");
+    setOpen(false);
+  };
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Settings2 className="h-4 w-4" />
@@ -74,6 +82,13 @@ export function DashboardSettings() {
               </div>
             ))}
           </div>
+          
+          <Separator />
+          
+          <Button onClick={handleSave} className="w-full gap-2">
+            <Check className="h-4 w-4" />
+            Save Changes
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

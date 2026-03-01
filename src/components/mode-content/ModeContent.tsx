@@ -3,8 +3,6 @@ import { ChatWindow } from "@/components/ChatWindow";
 import { Dashboard } from "@/components/Dashboard";
 import { MemoryDashboard } from "@/components/MemoryDashboard";
 import { Multimodal } from "@/components/Multimodal";
-import { PersonaSelector } from "@/components/PersonaSelector";
-import { CompanionModeSelector } from "@/components/CompanionModeSelector";
 import Personas from "@/pages/Personas";
 import Settings from "@/pages/Settings";
 import Reports from "@/pages/Reports";
@@ -17,17 +15,7 @@ interface ModeContentProps {
 
 export function ModeContent({ activeMode }: ModeContentProps) {
   if (activeMode === "chat") {
-    return (
-      <>
-        <div className="border-b px-3 py-1.5 flex items-center justify-between gap-2">
-          <PersonaSelector onSelectPersona={(persona) => {
-            console.log(`Index: Persona changed to: ${persona}`);
-          }} />
-          <CompanionModeSelector />
-        </div>
-        <ChatWindow />
-      </>
-    );
+    return <ChatWindow />;
   }
   
   if (activeMode === "dashboard") {
