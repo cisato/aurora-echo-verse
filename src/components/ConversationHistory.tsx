@@ -2,9 +2,27 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Conversation } from '@/hooks/useConversations';
-import { MessageSquare, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, ChevronLeft, ChevronRight, Briefcase, Sprout, Heart, Zap, Coffee, Palette, Code, ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const COMPANION_MODES = [
+  { id: "assistant", label: "Assistant", icon: Briefcase, color: "text-blue-500" },
+  { id: "growth_partner", label: "Growth Partner", icon: Sprout, color: "text-green-500" },
+  { id: "therapist_lite", label: "Supportive", icon: Heart, color: "text-rose-500" },
+  { id: "strategic", label: "Strategic", icon: Zap, color: "text-amber-500" },
+  { id: "casual", label: "Casual", icon: Coffee, color: "text-orange-500" },
+  { id: "creative", label: "Creative", icon: Palette, color: "text-purple-500" },
+  { id: "technical", label: "Technical", icon: Code, color: "text-cyan-500" },
+];
 
 interface ConversationHistoryProps {
   conversations: Conversation[];
@@ -26,7 +44,10 @@ export function ConversationHistory({
   onToggleCollapse
 }: ConversationHistoryProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const { settings, updateSetting } = useUserSettings();
 
+  const currentMode = COMPANION_MODES.find(m => m.id === settings.companion_mode) || COMPANION_MODES[0];
+  const CurrentIcon = currentMode.icon;
   if (isCollapsed) {
     return (
       <div className="w-12 h-full border-r bg-background/60 backdrop-blur-lg flex flex-col items-center py-4">
@@ -89,6 +110,36 @@ export function ConversationHistory({
             </Button>
           )}
         </div>
+      </div>
+
+      {/* Companion Mode Selector */}
+      <div className="p-2 border-b">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs h-8">
+              <CurrentIcon className={`h-3.5 w-3.5 ${currentMode.color}`} />
+              <span className="truncate">{currentMode.label} Mode</span>
+              <ChevronDown className="h-3 w-3 ml-auto text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52">
+            {COMPANION_MODES.map(mode => {
+              const Icon = mode.icon;
+              const isActive = settings.companion_mode === mode.id;
+              return (
+                <DropdownMenuItem
+                  key={mode.id}
+                  onClick={() => updateSetting('companion_mode', mode.id)}
+                  className={cn("flex items-center gap-2 cursor-pointer", isActive && "bg-accent")}
+                >
+                  <Icon className={`h-4 w-4 ${mode.color}`} />
+                  <span className="text-sm">{mode.label}</span>
+                  {isActive && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       
       <ScrollArea className="flex-1">
