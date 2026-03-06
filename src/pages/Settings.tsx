@@ -74,7 +74,6 @@ const Settings = () => {
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="mb-4 flex-wrap">
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="voice">Voice</TabsTrigger>
           <TabsTrigger value="localai">Local AI</TabsTrigger>
           <TabsTrigger value="memory">Memory</TabsTrigger>
         </TabsList>
@@ -114,71 +113,6 @@ const Settings = () => {
                   <p className="text-xs text-muted-foreground">Allow AI to search the web for information</p>
                 </div>
                 <Switch id="webSearchEnabled" checked={webSearchEnabled} onCheckedChange={setWebSearchEnabled} />
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* Voice tab */}
-        <TabsContent value="voice">
-          <Card className="p-5 border-none bg-gradient-to-br from-primary/5 to-accent/5 glass-panel">
-            <h2 className="text-xl font-bold mb-4">Voice Settings</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="voiceEnabled">Enable Voice</Label>
-                  <p className="text-xs text-muted-foreground">Text-to-speech for Aurora's responses</p>
-                </div>
-                <Switch id="voiceEnabled" checked={voiceEnabled} onCheckedChange={setVoiceEnabled} />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="selectedVoice">Voice Style</Label>
-                <Select value={selectedVoice} onValueChange={setSelectedVoice} disabled={!voiceEnabled}>
-                  <SelectTrigger id="selectedVoice">
-                    <SelectValue placeholder="Select voice" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en-US-AriaNeural">Aria (Female)</SelectItem>
-                    <SelectItem value="en-US-GuyNeural">Guy (Male)</SelectItem>
-                    <SelectItem value="en-US-JennyNeural">Jenny (Female)</SelectItem>
-                    <SelectItem value="en-GB-RyanNeural">Ryan (British Male)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="voiceRate">Speech Rate</Label>
-                  <span className="text-sm text-muted-foreground">{voiceRate}x</span>
-                </div>
-                <Slider
-                  id="voiceRate"
-                  min={0.5}
-                  max={1.5}
-                  step={0.05}
-                  value={[voiceRate]}
-                  onValueChange={([value]) => setVoiceRate(value)}
-                  disabled={!voiceEnabled}
-                />
-                <p className="text-xs text-muted-foreground">Lower values sound more natural and conversational</p>
-              </div>
-
-              <div className="grid gap-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="voicePitch">Voice Pitch</Label>
-                  <span className="text-sm text-muted-foreground">{voicePitch}</span>
-                </div>
-                <Slider
-                  id="voicePitch"
-                  min={0.8}
-                  max={1.3}
-                  step={0.05}
-                  value={[voicePitch]}
-                  onValueChange={([value]) => setVoicePitch(value)}
-                  disabled={!voiceEnabled}
-                />
-                <p className="text-xs text-muted-foreground">Slightly above 1.0 gives a warmer, friendlier tone</p>
               </div>
             </div>
           </Card>
