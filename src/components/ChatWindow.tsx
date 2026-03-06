@@ -67,12 +67,15 @@ export function ChatWindow() {
   const { startRecognition, stopRecognition } = useSpeechRecognition({
     onResult: (transcript) => {
       setInputText(transcript);
-      handleSendMessage(transcript);
+      // Small delay so user sees the transcript before sending
+      setTimeout(() => handleSendMessage(transcript), 300);
     },
     onInterim: (transcript) => setInputText(transcript),
     onError: (error) => {
       console.error("Speech recognition error:", error);
-      toast.error("Speech recognition error. Please try again.");
+      setIsRecording(false);
+    },
+    onEnd: () => {
       setIsRecording(false);
     }
   });
