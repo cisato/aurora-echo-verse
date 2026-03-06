@@ -199,60 +199,69 @@ export const useSpeechSynthesis = ({ onStart, onEnd, useElevenLabs = false }: Us
     synthRef.current.cancel();
     
     try {
-      const utterance = new SpeechSynthesisUtterance(text);
+      // Break long text into natural sentences for more fluent delivery
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
       
-      if (voiceSettings?.voice) {
+      sentences.forEach((sentence, index) => {
+        const utterance = new SpeechSynthesisUtterance(sentence.trim());
+        
         // Use cached voices if available for better performance
         let voices;
         if (voiceCache.current.all && voiceCache.current.all.length > 0) {
           voices = voiceCache.current.all;
         } else {
-          voices = synthRef.current.getVoices();
+          voices = synthRef.current!.getVoices();
         }
         
-        // Try to match the voice by name or characteristics
-        let selectedVoice = voices.find(v => v.name.includes(voiceSettings.voice));
+        // Prefer high-quality natural voices for fluent output
+        const preferredVoiceNames = [
+          'Google UK English Female', 'Google US English', 'Microsoft Zira',
+          'Samantha', 'Karen', 'Daniel', 'Moira', 'Tessa',
+          'Google UK English Male', 'Microsoft David',
+        ];
         
-        // If no specific match, try to match by gender or type
+        let selectedVoice: SpeechSynthesisVoice | undefined;
+        
+        if (voiceSettings?.voice) {
+          selectedVoice = voices.find(v => v.name.includes(voiceSettings.voice!));
+        }
+        
+        // Try preferred natural-sounding voices
         if (!selectedVoice) {
-          if (voiceSettings.voice.includes('female')) {
-            selectedVoice = voiceCache.current.female?.[0] || 
-                           voices.find(v => v.name.toLowerCase().includes('female'));
-          } else if (voiceSettings.voice.includes('male')) {
-            selectedVoice = voiceCache.current.male?.[0] || 
-                           voices.find(v => v.name.toLowerCase().includes('male'));
+          for (const name of preferredVoiceNames) {
+            selectedVoice = voices.find(v => v.name.includes(name));
+            if (selectedVoice) break;
           }
         }
         
-        // Fall back to an English voice if no match
+        // Fall back to any English voice
         if (!selectedVoice) {
-          selectedVoice = voiceCache.current.english?.[0] || 
-                         voices.find(v => v.lang.startsWith('en'));
+          selectedVoice = voices.find(v => v.lang.startsWith('en') && v.localService);
+          if (!selectedVoice) {
+            selectedVoice = voices.find(v => v.lang.startsWith('en'));
+          }
         }
         
         if (selectedVoice) {
-          console.log(`Using browser voice: ${selectedVoice.name}`);
           utterance.voice = selectedVoice;
         }
-      }
-      
-      if (voiceSettings?.rate) {
-        utterance.rate = voiceSettings.rate;
-      }
-      
-      if (voiceSettings?.pitch) {
-        utterance.pitch = voiceSettings.pitch;
-      }
-      
-      if (onStart) {
-        utterance.onstart = onStart;
-      }
-      
-      if (onEnd) {
-        utterance.onend = onEnd;
-      }
-      
-      synthRef.current.speak(utterance);
+        
+        // Natural speech settings — slightly slower with warm pitch for human feel
+        utterance.rate = voiceSettings?.rate ?? 0.92;
+        utterance.pitch = voiceSettings?.pitch ?? 1.05;
+        utterance.volume = 1;
+        
+        // Only fire callbacks on first/last utterance
+        if (index === 0 && onStart) {
+          utterance.onstart = onStart;
+        }
+        
+        if (index === sentences.length - 1 && onEnd) {
+          utterance.onend = onEnd;
+        }
+        
+        synthRef.current!.speak(utterance);
+      });
     } catch (error) {
       console.error("Speech synthesis error:", error);
       if (onEnd) onEnd();
