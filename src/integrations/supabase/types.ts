@@ -196,6 +196,36 @@ export type Database = {
         }
         Relationships: []
       }
+      crisis_events: {
+        Row: {
+          created_at: string
+          detected_in: string | null
+          id: string
+          region: string | null
+          resources_shown: Json | null
+          risk_level: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detected_in?: string | null
+          id?: string
+          region?: string | null
+          resources_shown?: Json | null
+          risk_level: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detected_in?: string | null
+          id?: string
+          region?: string | null
+          resources_shown?: Json | null
+          risk_level?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       emotional_patterns: {
         Row: {
           context: string | null
@@ -303,6 +333,42 @@ export type Database = {
           },
         ]
       }
+      payment_transactions: {
+        Row: {
+          amount_kobo: number
+          created_at: string
+          currency: string
+          id: string
+          paystack_payload: Json | null
+          reference: string
+          status: string
+          tier: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_kobo: number
+          created_at?: string
+          currency?: string
+          id?: string
+          paystack_payload?: Json | null
+          reference: string
+          status: string
+          tier?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_kobo?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          paystack_payload?: Json | null
+          reference?: string
+          status?: string
+          tier?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       proactive_insights: {
         Row: {
           created_at: string
@@ -345,25 +411,112 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          country: string | null
           created_at: string
           display_name: string | null
           id: string
+          onboarding_completed: boolean
+          preferred_currency: string
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          country?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
+          onboarding_completed?: boolean
+          preferred_currency?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          country?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
+          onboarding_completed?: boolean
+          preferred_currency?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ritual_preferences: {
+        Row: {
+          created_at: string
+          email_enabled: boolean
+          evening_enabled: boolean
+          evening_time: string
+          id: string
+          midday_enabled: boolean
+          midday_time: string
+          morning_enabled: boolean
+          morning_time: string
+          push_enabled: boolean
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_enabled?: boolean
+          evening_enabled?: boolean
+          evening_time?: string
+          id?: string
+          midday_enabled?: boolean
+          midday_time?: string
+          morning_enabled?: boolean
+          morning_time?: string
+          push_enabled?: boolean
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_enabled?: boolean
+          evening_enabled?: boolean
+          evening_time?: string
+          id?: string
+          midday_enabled?: boolean
+          midday_time?: string
+          morning_enabled?: boolean
+          morning_time?: string
+          push_enabled?: boolean
+          timezone?: string
           updated_at?: string
           user_id?: string
         }
@@ -414,15 +567,69 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          amount_kobo: number | null
+          cancel_at_period_end: boolean
+          created_at: string
+          currency: string
+          current_period_end: string | null
+          id: string
+          paystack_customer_code: string | null
+          paystack_email_token: string | null
+          paystack_subscription_code: string | null
+          plan_code: string | null
+          status: string
+          tier: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_kobo?: number | null
+          cancel_at_period_end?: boolean
+          created_at?: string
+          currency?: string
+          current_period_end?: string | null
+          id?: string
+          paystack_customer_code?: string | null
+          paystack_email_token?: string | null
+          paystack_subscription_code?: string | null
+          plan_code?: string | null
+          status?: string
+          tier?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_kobo?: number | null
+          cancel_at_period_end?: boolean
+          created_at?: string
+          currency?: string
+          current_period_end?: string | null
+          id?: string
+          paystack_customer_code?: string | null
+          paystack_email_token?: string | null
+          paystack_subscription_code?: string | null
+          plan_code?: string | null
+          status?: string
+          tier?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_memory: {
         Row: {
           category: string
           confidence: number | null
           created_at: string | null
           id: string
+          is_pinned: boolean
+          is_sensitive: boolean
           key: string
           last_reinforced_at: string | null
           source: string | null
+          source_message_id: string | null
           updated_at: string | null
           user_id: string
           value: string
@@ -432,9 +639,12 @@ export type Database = {
           confidence?: number | null
           created_at?: string | null
           id?: string
+          is_pinned?: boolean
+          is_sensitive?: boolean
           key: string
           last_reinforced_at?: string | null
           source?: string | null
+          source_message_id?: string | null
           updated_at?: string | null
           user_id: string
           value: string
@@ -444,9 +654,12 @@ export type Database = {
           confidence?: number | null
           created_at?: string | null
           id?: string
+          is_pinned?: boolean
+          is_sensitive?: boolean
           key?: string
           last_reinforced_at?: string | null
           source?: string | null
+          source_message_id?: string | null
           updated_at?: string | null
           user_id?: string
           value?: string
@@ -500,7 +713,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_tier: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
