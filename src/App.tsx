@@ -23,6 +23,8 @@ import ResetPassword from "./pages/ResetPassword";
 import MemoryPage from "./pages/Memory";
 import ApiKeys from "./pages/ApiKeys";
 import ApiAnalytics from "./pages/ApiAnalytics";
+import Pricing from "./pages/Pricing";
+import Billing from "./pages/Billing";
 
 const queryClient = new QueryClient();
 
