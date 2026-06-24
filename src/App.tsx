@@ -23,6 +23,8 @@ import ResetPassword from "./pages/ResetPassword";
 import MemoryPage from "./pages/Memory";
 import ApiKeys from "./pages/ApiKeys";
 import ApiAnalytics from "./pages/ApiAnalytics";
+import Pricing from "./pages/Pricing";
+import Billing from "./pages/Billing";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +103,12 @@ const App = () => (
                 <Route path="/api-analytics" element={
                   <ProtectedRoute>
                     <ApiAnalytics />
+                  </ProtectedRoute>
+                } />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/billing" element={
+                  <ProtectedRoute>
+                    <Billing />
                   </ProtectedRoute>
                 } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
