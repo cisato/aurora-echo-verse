@@ -64,11 +64,10 @@ export function ChatWindow() {
     }
   };
 
-  const { startRecognition, stopRecognition } = useSpeechRecognition({
+  const { startRecognition, stopRecognition, isTranscribing } = useSpeechRecognition({
     onResult: (transcript) => {
       setInputText(transcript);
-      // Small delay so user sees the transcript before sending
-      setTimeout(() => handleSendMessage(transcript), 300);
+      setTimeout(() => handleSendMessage(transcript), 200);
     },
     onInterim: (transcript) => setInputText(transcript),
     onError: (error) => {
