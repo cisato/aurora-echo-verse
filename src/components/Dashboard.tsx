@@ -10,6 +10,7 @@ import { RemindersCard } from "./dashboard/RemindersCard";
 import { AgentStatusCard } from "./dashboard/AgentStatusCard";
 import { MultimodalCapabilitiesCard } from "./dashboard/MultimodalCapabilitiesCard";
 import { DashboardSettings } from "./dashboard/DashboardSettings";
+import { DailyRitualCard } from "./dashboard/DailyRitualCard";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { useProfile } from "@/hooks/useProfile";
 import { Activity, Cpu, Sparkles } from "lucide-react";
@@ -86,19 +87,25 @@ export function Dashboard() {
   return (
     <div className="p-4 md:p-6 overflow-auto max-w-7xl mx-auto w-full">
       {/* Header */}
-      <header className="mb-8 flex items-start justify-between">
-        <div>
+      <header className="mb-6 flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <span className="text-xs font-medium text-primary uppercase tracking-wider">Aurora AI</span>
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-[11px] font-medium text-primary uppercase tracking-wider">Aurora</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="font-display text-2xl sm:text-3xl tracking-tight truncate">
             {greeting()}{profile?.display_name ? `, ${profile.display_name}` : ""}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Your intelligent companion is ready to assist.</p>
+          <p className="text-sm text-muted-foreground mt-1">Here when you need me.</p>
         </div>
         <DashboardSettings />
       </header>
+
+      {/* Daily Ritual */}
+      <section className="mb-6">
+        <DailyRitualCard />
+      </section>
+
 
       {/* System Overview */}
       {statusCards.length > 0 && (
