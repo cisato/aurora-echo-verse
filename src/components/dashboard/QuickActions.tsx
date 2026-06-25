@@ -1,41 +1,41 @@
-
-import { Brain, CloudSun, Code, Globe, MessageCircle, Mic, Search, Settings as SettingsIcon, Image, User, FileText } from "lucide-react";
+import { Brain, CloudSun, Code, Globe, MessageCircle, Mic, Search, Image, User, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 
 interface QuickActionProps {
   onAction: (action: string) => void;
 }
 
+const ACTIONS = [
+  { name: "Chat", icon: MessageCircle, action: "chat" },
+  { name: "Voice", icon: Mic, action: "voice" },
+  { name: "Search", icon: Search, action: "search" },
+  { name: "Weather", icon: CloudSun, action: "weather" },
+  { name: "Code", icon: Code, action: "code" },
+  { name: "Web", icon: Globe, action: "web" },
+  { name: "Memory", icon: Brain, action: "memory" },
+  { name: "Image", icon: Image, action: "multimodal" },
+  { name: "Personas", icon: User, action: "personas" },
+  { name: "Reports", icon: FileText, action: "reports" },
+];
+
 export function QuickActions({ onAction }: QuickActionProps) {
-  const quickActions = [
-    { name: "Chat", icon: MessageCircle, color: "bg-aurora-blue", action: "chat" },
-    { name: "Voice", icon: Mic, color: "bg-aurora-pink", action: "voice" },
-    { name: "Search", icon: Search, color: "bg-aurora-purple", action: "search" },
-    { name: "Weather", icon: CloudSun, color: "bg-aurora-orange", action: "weather" },
-    { name: "Code", icon: Code, color: "bg-aurora-green", action: "code" },
-    { name: "Web", icon: Globe, color: "bg-aurora-cyan", action: "web" },
-    { name: "Memory", icon: Brain, color: "bg-aurora-purple", action: "memory" },
-    { name: "Multimodal", icon: Image, color: "bg-aurora-blue", action: "multimodal" },
-    { name: "Personas", icon: User, color: "bg-aurora-orange", action: "personas" },
-    { name: "Reports", icon: FileText, color: "bg-aurora-pink", action: "reports" },
-  ];
-  
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-      {quickActions.map((item, i) => {
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3">
+      {ACTIONS.map((item) => {
         const Icon = item.icon;
         return (
-          <Button 
-            key={i} 
-            variant="ghost" 
-            className="flex-col h-20 rounded-xl bg-card/50 hover:bg-card border border-border/40 hover:border-border hover:shadow-md transition-all duration-200 group"
+          <Button
+            key={item.action}
+            variant="ghost"
+            className="flex-col h-20 rounded-2xl bg-card/60 hover:bg-card border border-border/40 hover:border-primary/40 hover:shadow-md transition-all group p-2"
             onClick={() => onAction(item.action)}
           >
-            <div className={`p-2 rounded-lg ${item.color}/10 mb-1.5 group-hover:${item.color}/20 transition-colors`}>
-              <Icon className="h-4 w-4 text-foreground/70 group-hover:text-foreground transition-colors" />
+            <div className="p-2 rounded-xl bg-primary/10 mb-1.5 group-hover:bg-primary/20 transition-colors">
+              <Icon className="h-4 w-4 text-primary" />
             </div>
-            <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">{item.name}</span>
+            <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+              {item.name}
+            </span>
           </Button>
         );
       })}

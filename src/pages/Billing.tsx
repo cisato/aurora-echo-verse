@@ -72,17 +72,17 @@ export default function Billing() {
     : null;
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-screen bg-background py-8 sm:py-12 px-4 safe-pt safe-pb">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Billing</h1>
-          <p className="text-muted-foreground">Manage your Aurora subscription</p>
+          <h1 className="font-display text-3xl">Billing</h1>
+          <p className="text-muted-foreground text-sm">Manage your Aurora subscription</p>
         </div>
 
-        <Card>
+        <Card className="rounded-3xl">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Current plan</CardTitle>
+              <CardTitle className="font-display">Current plan</CardTitle>
               <Badge variant={tier === "free" ? "secondary" : "default"} className="capitalize">
                 {tier}
               </Badge>
@@ -102,16 +102,16 @@ export default function Billing() {
             ) : (
               <>
                 {sub?.status === "active" && (
-                  <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                  <div className="flex items-center gap-2 text-sm text-primary">
                     <CheckCircle2 className="h-4 w-4" />
                     Subscription is active
                   </div>
                 )}
-                <div className="flex gap-2">
-                  <Button onClick={() => navigate("/pricing")}>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button onClick={() => navigate("/pricing")} className="rounded-xl h-11 w-full sm:w-auto">
                     {tier === "free" ? "View plans" : "Change plan"}
                   </Button>
-                  <Button variant="outline" asChild>
+                  <Button variant="outline" asChild className="rounded-xl h-11 w-full sm:w-auto">
                     <Link to="/">Back to app</Link>
                   </Button>
                 </div>
