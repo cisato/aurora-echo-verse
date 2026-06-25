@@ -1,146 +1,93 @@
-# Aurora — "Real-Time Human Companion" Plan
+# Aurora Rebuild Plan
 
-## 1. Competitor Audit → What to Steal, What to Avoid
+## Part 1 — Strategic Brainstorm
 
+### What will make Aurora WIN
+1. **Real companionship, not a chatbot** — time-aware greetings, remembers context across days, references past conversations naturally ("last Tuesday you mentioned…"). Replika's #1 retention driver.
+2. **Voice-first on mobile** — one tap, hands-free, natural turn-taking. ChatGPT voice mode is the gold standard; match it.
+3. **Proactive check-ins** — "You said you had a presentation today, how did it go?" Push notifications that feel like a friend texting, not a marketing blast.
+4. **Rituals** — morning briefing, evening reflection, weekly review. Gives users a *reason* to open the app daily (Pi.ai's weakness — no habit loop).
+5. **Privacy as a feature** — local AI option, memory you can audit/delete, no training on user data. A direct shot at Character.ai's trust problem.
+6. **Distinctive personality** — Aurora has a *voice*, opinions, warmth. Generic assistants lose to ones with character.
+7. **Naira-priced tiers via Paystack** — already shipped. Big moat in African markets where Stripe-only competitors can't accept cards.
 
-| Competitor                  | Their pros (steal, improve)                               | Their mistakes (avoid)                                                                             |
-| --------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **ChatGPT**                 | Best general reasoning, voice mode, memory toggle, canvas | Sterile/corporate tone, memory feels shallow, no proactive reach-out, no emotional continuity      |
-| **Claude**                  | Long context, thoughtful writing, projects                | No voice, no persistent identity, no proactivity, no mobile-native feel                            |
-| **Pi (Inflection)**         | Warm voice, conversational pacing, empathy                | Weak memory, no tools, no utility beyond chat, shut down — proves "vibes only" fails               |
-| **Character.ai**            | Persona depth, addictive engagement, fandom               | Roleplay drift, hallucinated facts, weak safety, teen-safety scandals                              |
-| **Replika**                 | Daily ritual, relationship arc, customization             | Paywalled intimacy backlash, uncanny avatars, romantic-only positioning, ToS reversals broke trust |
-| **Grok / Gemini / Copilot** | Real-time web, multimodal, Google/MS integration          | No personality, no memory of *you*, feel like search bars with a voice                             |
-| **Friend.com / Tab AI**     | Always-listening ambient hardware                         | Privacy panic, no clear utility, no UI for review                                                  |
+### What will make Aurora FAIL
+1. **Generic AI aesthetics** — purple gradients + Inter font = invisible. (Fixing this now.)
+2. **Broken mobile UX** — sidebar that can't collapse, tiny tap targets, no bottom nav. Mobile is 70% of companion-app usage.
+3. **Empty dashboard on first run** — too many widgets, no clear "what do I do?" path. Need a guided first conversation.
+4. **No reason to come back tomorrow** — without proactive nudges + rituals, users churn in week 1.
+5. **Slow voice latency** — >2s response kills the "companion" illusion.
+6. **Feature sprawl** — Code, Weather, Web, Search, Multimodal, Personas, Reports, API Keys, Analytics all in the sidebar. Overwhelming. Hide power features behind a "More" drawer.
+7. **No onboarding** — users land on a dashboard with no idea what Aurora can do.
 
+## Part 2 — UI & Theme Rebuild
 
-**Synthesis — Aurora's wedge:** *the only AI that remembers who you are, reaches out first, speaks like a friend, and stays useful as a tool* — without sliding into roleplay drift, paywalled affection, or always-on surveillance.
+### New aesthetic: Cream on Forest Green
+- **Background:** deep forest `hsl(155 35% 12%)` with subtle organic gradient
+- **Surface/cards:** warm cream `hsl(40 30% 92%)` with soft shadow
+- **Primary text on dark:** cream `hsl(40 30% 92%)`
+- **Primary accent:** moss/sage `hsl(140 40% 55%)`
+- **Secondary accent:** warm clay `hsl(20 50% 65%)` for highlights
+- **Typography:** Fraunces (display, headings — organic serif) + Inter Tight (body)
+- **Radius:** generous `1.25rem`, soft natural feel
+- **Motion:** slow breathing animations, no sharp transitions
 
----
+Tokens rewritten in `src/index.css` and `tailwind.config.ts`. Aurora gradient utility re-tuned to green/sage/cream range. Removes all purple/blue.
 
-## 2. Why the Current Build Blocks That Vision
+### Sidebar fix + mobile-first navigation
+Replace `src/components/Sidebar.tsx` with a responsive shell:
+- **Desktop (≥768px):** collapsible left rail using shadcn `Sidebar` + `SidebarProvider`. Trigger always visible in top header.
+- **Mobile (<768px):** sidebar becomes an off-canvas `Sheet` opened from a hamburger in a new top app bar. Bottom nav bar with 5 primary tabs: Chat, Dashboard, Memory, Voice, More. Everything else (Personas, Reports, API Keys, Analytics, Settings) lives behind "More".
+- Hamburger and bottom nav use 44px tap targets.
+- The current "collapsed but stuck visible" bug is fixed because the new shell uses Sheet on mobile (fully hides) and proper `SidebarProvider` state on desktop.
 
-1. **Not real-time** — chat is request/response. No streaming voice conversation, no "Aurora speaks first," no presence indicator.
-2. **Voice ceiling** — browser TTS is robotic; nothing close to Pi/ChatGPT voice mode.
-3. **Memory is invisible** — users can't *see* Aurora remembering, so it feels like every other chatbot on turn one.
-4. **No proactivity that reaches the user** — `proactive-insights` only shows in-app; no push, no email, no scheduled check-in.
-5. **No identity continuity** — no avatar, no consistent voice, no rituals (morning brief, evening reflection).
-6. **No mobile / install / notifications** — companion apps die without daily re-entry.
-7. **No landing/pricing/onboarding** — gated dashboard, no "aha", no upgrade path (Paystack still pending).
-8. **Placeholder pages** (Search/Weather/Code/Web) signal "demo".
-9. **Trust gaps** — no visible privacy/memory controls, no export, no "forget this" button → blocks the deep-disclosure loop competitors got burned on.
-10. **No safety rails** — needs crisis-detection + handoff (suicide/self-harm/abuse keywords → resources), or it'll hit the same headlines that hurt Replika/Character.ai.
+### Mobile optimizations across the app
+- `Dashboard.tsx`: grids collapse to single column <640px, headers shrink, widget cards get larger tap zones, settings gear moves into header.
+- `Chat`: composer pinned to bottom above the new mobile bottom nav, safe-area padding for iOS notch.
+- `Pricing` & `Billing`: stack vertically on mobile, full-width CTAs.
+- All pages get `pb-20 md:pb-0` so bottom nav doesn't cover content.
+- Set preview viewport to mobile during build so we design mobile-first.
 
----
+### Onboarding (new)
+First-visit users get a 3-step intro overlay instead of the current alert:
+1. "Hi, I'm Aurora" + name capture
+2. "What should I help with?" (companionship / productivity / learning) — seeds persona
+3. "Talk or type?" — picks default input mode
+Then drops them into Chat with a warm opener instead of the dashboard.
 
-## 3. What Makes Aurora Ahead of Its Time
+## Part 3 — Retention features to add (after the rebuild)
+- Daily ritual cards on dashboard (morning briefing, evening reflection)
+- Push notification scaffolding (Capacitor path, deferred until user requests)
+- "Remember this" quick action in chat → writes to memory
+- Streak counter (gentle, not gamified-anxiety)
 
-Five pillars, each pulling from a competitor's strength and patching their weakness:
+## Technical scope
 
-### A. Real-Time Voice Presence (beats Pi + ChatGPT voice)
+**Files rewritten**
+- `src/index.css` — new color tokens, gradients, fonts
+- `tailwind.config.ts` — forest/cream palette, Fraunces + Inter Tight, new radius
+- `src/components/Sidebar.tsx` → replaced with `AppShell.tsx` + `MobileBottomNav.tsx` + `TopBar.tsx`
+- `src/pages/Index.tsx` — uses new shell, removes WelcomeAlert in favor of Onboarding
+- `src/components/Dashboard.tsx` — mobile grid, tighter spacing
+- `src/components/welcome/Onboarding.tsx` — new 3-step flow
+- `src/pages/Pricing.tsx`, `src/pages/Billing.tsx` — mobile pass
+- `index.html` — load Fraunces + Inter Tight from Google Fonts, update theme-color meta
+- `src/App.css` — purge stale Vite defaults
 
-- **Live voice mode**: full-duplex, interruptible, low-latency using OpenAI Realtime API or Gemini Live (via edge function). User taps a single "Talk" orb on Chat → Aurora is *present*, like a phone call.
-- **Natural barge-in + VAD** (voice activity detection) so user can interrupt mid-sentence.
-- **Emotional TTS** via ElevenLabs (already partially wired) — tier-gated: free = browser TTS, Pro = ElevenLabs.
-- **Idle ambient sound** ("Aurora is here" subtle indicator).
+**Files NOT touched**: edge functions, Supabase migrations, Paystack flow, auth, types.
 
-### B. Visible, Editable Memory (beats ChatGPT memory)
+**Out of scope this round** (call out separately if you want them next):
+- Push notifications wiring
+- Capacitor native build
+- New AI personality tuning in the chat edge function
+- Streaks / ritual UI (scaffolding only)
 
-- New `/memory` page upgrade: timeline of facts Aurora has learned, with **source message links**, confidence, and one-click "Edit", "Forget", "Pin as core".
-- "Aurora's view of me" card on dashboard: top 5 facts she'd describe you with → builds trust + the "wow she really knows me" moment.
-- Per-fact privacy: mark as "sensitive" → encrypted at rest, never sent to logs.
+## Order of work
+1. Theme tokens + fonts (index.css, tailwind, index.html)
+2. New AppShell + TopBar + MobileBottomNav, delete old Sidebar
+3. Dashboard mobile pass
+4. Onboarding flow replaces WelcomeAlert
+5. Pricing/Billing mobile pass
+6. Verify on mobile viewport via preview
 
-### C. Proactive Outreach (beats every competitor — none truly reaches out)
-
-- **Scheduled rituals**: morning brief, midday nudge, evening reflection — user picks times.
-- **Smart triggers** via the existing `daily-summary` + `proactive-insights` functions, surfaced through:
-  - **Web push** (PWA Notification API)
-  - **Email digests** via Resend (already configured)
-  - **In-app "Aurora wants to talk"** banner with the actual opener message
-- **Re-engagement intelligence**: if user is silent 3 days, Aurora sends a contextual check-in based on the last unresolved thread — not a generic "we miss you".
-
-### D. Companion OS — Utility + Heart (beats Pi/Replika "vibes only")
-
-- Keep utility surfaces (Reports, Multimodal, API) but reframe each as *something Aurora does for you*, not separate tools.
-- "Aurora can…" command palette (⌘K): "summarize my week", "remind me to call mom", "draft a reply to this email" → routes to the right subsystem.
-- **Real-time web** via tool calls in chat (no separate Search page) — fixes the "Search page is empty" problem and matches Grok/Gemini.
-
-### E. Trust & Safety Layer (beats Replika/Character.ai scandals)
-
-- **Crisis safety**: keyword + classifier on user input → empathic response + region-aware hotline + opt-in human-help mode. Never roleplay around self-harm.
-- **Age + consent gate** on signup; no romantic/NSFW mode at all (deliberate differentiation).
-- **Transparency dashboard**: what Aurora remembers, what she shares with model, full export (JSON), full delete.
-- **Stable promises**: no paywall on emotional features ever; paywall is on *capacity, voice quality, and tools* — published as a written commitment in `/about/trust`.
-
----
-
-## 4. Build Plan (Sequenced)
-
-### Phase 1 — Foundation (revenue + survival)
-
-1. **Paystack integration** (BYOK secret + `subscriptions` table + initialize/verify/webhook edge functions + `/pricing` + `/billing`). Tier-gates Pro features (voice, ElevenLabs, push, capacity).
-2. **Landing page** at `/` (unauth) + move dashboard to `/app`. Hero: "The AI that actually knows you." + companion-mode showcase + pricing.
-3. **Onboarding modal** on first login: pick mode → one fact about you → first memory seeded → tailored greeting.
-4. **Mobile + PWA**: responsive pass on Dashboard/Chat/Sidebar; manifest + service worker; installable.
-
-### Phase 2 — Differentiation Pillars
-
-5. **Real-time voice mode**: edge function bridging OpenAI Realtime (requires user `OPENAI_REALTIME_API_KEY` or use Lovable Gateway equivalent if available); WebRTC client; "Talk to Aurora" orb in Chat.
-6. **ElevenLabs Pro voice** (gated by subscription).
-7. **Memory visibility upgrade**: rebuild `/memory` with timeline, edit/forget/pin, "Aurora's view of you" dashboard card.
-8. **Proactive outreach**:
-  - Web push subscription + storage
-  - Resend email digest opt-in (Settings)
-  - Cron edge function (Supabase pg_cron) hitting `daily-summary` + push/email dispatch
-  - "Aurora wants to talk" in-app banner with real opener
-
-### Phase 3 — Companion OS + Safety
-
-9. **Command palette (⌘K)** routing to subsystems via natural language.
-10. **Real-time web tool** inside chat (replaces empty `/search`, `/web`); remove or hide `/weather`, `/code` until ready.
-11. **Crisis-safety classifier** edge function on every user message; safe-response template + hotline registry; opt-in human-help mode.
-12. **Trust dashboard**: full data export endpoint, "Forget everything about me" with confirm, sensitive-fact flag.
-
-### Phase 4 — Polish & Launch
-
-13. Rename "AI agent framework status" → "Aurora Subsystems".
-14. Wire remaining quick actions (Voice/Memory/Reminders).
-15. SEO meta, sitemap, OG images for landing.
-16. Publish.
-
----
-
-## 5. Technical Notes
-
-- **Real-time voice**: Lovable AI Gateway doesn't currently expose Realtime; fallback is OpenAI Realtime via user-supplied OPENAI_API_KEY (BYOK secret) OR Gemini Live equivalent. I'll confirm gateway support before building; if absent, request the key.  
-  
-Push: web-push library in edge function; store subscriptions in push_subscriptions table (RLS by user_id, GRANTed).  
-  
-Cron: Supabase pg_cron calling edge functions on schedule per user's chosen ritual times.  
-  
-Subscriptions table (Paystack) and push_subscriptions table — both follow CREATE → GRANT → RLS → POLICY rule.  
-  
-Crisis classifier: lightweight prompt to google/gemini-3-flash-preview returning {risk: none|moderate|high} + bypassing memory write on high.  
-  
-Realtime memory writes via Supabase Realtime so the memory dashboard updates as Aurora learns.  
-  
-6. Confirmations Before I Build  
-  
-  
-Real-time voice provider: OK to use OpenAI Realtime API (you provide OPENAI_API_KEY) for the live voice mode? Alternative is text-only with high-quality TTS via ElevenLabs. I want the free one but only integrate the pse Realtime; fallback is OpenAI Realtime via user-supplied `OPENAI_API_KEY` (BYOK secret) OR Gemini Live equivalent. I'll confirm gateway support before building; if absent, request the key.
-- **Push**: web-push library in edge function; store subscriptions in `push_subscriptions` table (RLS by user_id, GRANTed).
-- **Cron**: Supabase `pg_cron` calling edge functions on schedule per user's chosen ritual times.
-- **Subscriptions table** (Paystack) and **push_subscriptions** table — both follow CREATE → GRANT → RLS → POLICY rule.
-- **Crisis classifier**: lightweight prompt to `google/gemini-3-flash-preview` returning `{risk: none|moderate|high}` + bypassing memory write on `high`.
-- **Realtime memory writes** via Supabase Realtime so the memory dashboard updates as Aurora learns.
-
----
-
-## 6. Confirmations Before I Build
-
-1. **Real-time voice provider**: OK to use **OpenAI Realtime API** (you provide `OPENAI_API_KEY`) for the live voice mode? Alternative is text-only with high-quality TTS via ElevenLabs. I 
-2. &nbsp;
-3. **Paystack**: ready to share secret key when prompted, and what currency (NGN default)? Default 
-4. **Pricing** (gates Pro voice + push + ElevenLabs + higher capacity): suggest Free / Pro ₦4,500/mo (~$3) / Enterprise ₦25,000/mo — adjust? Adjust it and make it a reasonable amount but higher than this. 
-5. **Safety stance**: confirm Aurora is **non-romantic, no NSFW, with crisis handoff** — locked as a product principle? Pre your recommendation 
-6. **Scope for first ship**: do all four phases, or ship Phase 1+2 first (revenue + real-time voice + memory) and queue 3+4? Do all 4 phases
+Confirm the cream-on-forest direction and I'll build it.

@@ -84,7 +84,7 @@ export function Dashboard() {
   ].filter(Boolean);
   
   return (
-    <div className="p-6 overflow-auto max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 overflow-auto max-w-7xl mx-auto w-full">
       {/* Header */}
       <header className="mb-8 flex items-start justify-between">
         <div>
