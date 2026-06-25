@@ -105,16 +105,9 @@ export function ChatWindow() {
       }));
       setDisplayMessages(formatted);
       initialGreetingRef.current = true;
-    } else if (!currentConversation) {
-      const initialGreeting: ChatMessageProps = {
-        message: profile?.display_name
-          ? `Hello ${profile.display_name}! I'm Aurora, your AI companion. How can I help you today?`
-          : "Hello! I'm Aurora, your AI companion. How can I help you today?",
-        sender: "bot",
-        timestamp: new Date(),
-        emotion: "happy"
-      };
-      setDisplayMessages([initialGreeting]);
+    } else {
+      // Empty canvas — Messages renders a warm suggestions screen.
+      setDisplayMessages([]);
     }
   }, [dbMessages, currentConversation, profile?.display_name]);
 
@@ -244,7 +237,11 @@ export function ChatWindow() {
 
       <div className="flex flex-col flex-1 min-w-0">
         <ProactiveInsightsBanner />
-        <Messages messages={displayMessages} isLoading={isLoading && !isStreaming} />
+        <Messages
+          messages={displayMessages}
+          isLoading={isLoading && !isStreaming}
+          onSuggestionClick={(text) => handleSendMessage(text)}
+        />
         <ChatInput
           inputText={inputText}
           onInputChange={setInputText}
@@ -254,6 +251,7 @@ export function ChatWindow() {
           isRecording={isRecording}
           isVoiceEnabled={isVoiceEnabled}
           isTalking={isTalking}
+          isTranscribing={isTranscribing}
         />
       </div>
     </div>
