@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -5,83 +6,85 @@
 
 @layer base {
   :root {
-    --background: 226 100% 98%;
-    --foreground: 222 84% 4.9%;
+    /* Cream on Forest Green — Light surfaces */
+    --background: 40 30% 94%;
+    --foreground: 155 35% 12%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 40 35% 96%;
+    --card-foreground: 155 35% 12%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 40 35% 97%;
+    --popover-foreground: 155 35% 12%;
 
-    --primary: 230 80% 60%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 150 40% 22%;
+    --primary-foreground: 40 35% 96%;
 
-    --secondary: 240 60% 96%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 140 18% 86%;
+    --secondary-foreground: 155 35% 15%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 40 20% 88%;
+    --muted-foreground: 150 15% 35%;
 
-    --accent: 262 80% 50%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 20 55% 60%;
+    --accent-foreground: 40 35% 98%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 5 70% 50%;
+    --destructive-foreground: 40 35% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 262 80% 50%;
+    --border: 140 15% 80%;
+    --input: 140 15% 82%;
+    --ring: 150 40% 35%;
 
-    --radius: 1rem;
+    --radius: 1.25rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 155 35% 14%;
+    --sidebar-foreground: 40 30% 92%;
+    --sidebar-primary: 140 40% 55%;
+    --sidebar-primary-foreground: 155 35% 10%;
+    --sidebar-accent: 155 30% 20%;
+    --sidebar-accent-foreground: 40 30% 92%;
+    --sidebar-border: 155 25% 22%;
+    --sidebar-ring: 140 40% 55%;
   }
 
   .dark {
-    --background: 222 47% 10%;
-    --foreground: 213 31% 91%;
+    /* Forest Green primary with cream accents */
+    --background: 155 35% 10%;
+    --foreground: 40 30% 92%;
 
-    --card: 222 47% 7%;
-    --card-foreground: 213 31% 91%;
+    --card: 155 30% 14%;
+    --card-foreground: 40 30% 92%;
 
-    --popover: 222 47% 7%;
-    --popover-foreground: 213 31% 91%;
+    --popover: 155 30% 13%;
+    --popover-foreground: 40 30% 92%;
 
-    --primary: 230 80% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 140 40% 55%;
+    --primary-foreground: 155 40% 10%;
 
-    --secondary: 222 47% 16%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 155 25% 20%;
+    --secondary-foreground: 40 30% 92%;
 
-    --muted: 223 47% 20%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 155 22% 18%;
+    --muted-foreground: 40 15% 70%;
 
-    --accent: 262 80% 50%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 20 55% 65%;
+    --accent-foreground: 155 40% 10%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 5 65% 45%;
+    --destructive-foreground: 40 30% 92%;
 
-    --border: 222 47% 25%;
-    --input: 222 47% 20%;
-    --ring: 262 80% 50%;
-    
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 155 22% 22%;
+    --input: 155 22% 20%;
+    --ring: 140 40% 55%;
+
+    --sidebar-background: 155 38% 8%;
+    --sidebar-foreground: 40 30% 92%;
+    --sidebar-primary: 140 40% 55%;
+    --sidebar-primary-foreground: 155 40% 10%;
+    --sidebar-accent: 155 30% 16%;
+    --sidebar-accent-foreground: 40 30% 92%;
+    --sidebar-border: 155 25% 18%;
+    --sidebar-ring: 140 40% 55%;
   }
 }
 
@@ -90,72 +93,46 @@
     @apply border-border;
   }
 
+  html, body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+
   body {
-    @apply bg-background text-foreground overflow-auto;
-  }
-
-  .glass-panel {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-lg;
-  }
-
-  .dark .glass-panel {
-    @apply bg-black/20 border-white/10;
-  }
-
-  .neural-bg {
-    @apply bg-neural-pattern;
-  }
-  
-  .scrollable-container {
-    @apply overflow-y-auto overflow-x-hidden;
+    background-image:
+      radial-gradient(at 0% 0%, hsl(var(--primary) / 0.08) 0, transparent 50%),
+      radial-gradient(at 100% 100%, hsl(var(--accent) / 0.06) 0, transparent 50%);
+    background-attachment: fixed;
   }
 }
 
 @layer utilities {
-  /* Add the missing bg-300% class */
-  .bg-300\% {
-    background-size: 300%;
+  .safe-pb {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-pt {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .glass-panel {
+    @apply bg-card/70 backdrop-blur-xl border border-border/50 shadow-lg;
+  }
+  .aurora-text {
+    background: linear-gradient(120deg, hsl(var(--primary)), hsl(var(--accent)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 }
 
-.aurora-text {
-  @apply bg-gradient-aurora bg-clip-text text-transparent bg-300% animate-gradient-shift;
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.04); opacity: 1; }
 }
-
-.glow-effect {
-  @apply relative;
-}
-
-.glow-effect::before {
-  content: "";
-  @apply absolute -inset-0.5 bg-gradient-aurora rounded-lg blur opacity-75 transition duration-1000 animate-gradient-shift;
-  z-index: -1;
-}
-
-.glow-effect:hover::before {
-  @apply opacity-100;
-}
-
-.pulse-circle {
-  @apply w-3 h-3 rounded-full animate-pulse;
-}
-
-.vr-environment {
-  perspective: 1000px;
-  @apply bg-gradient-mesh;
-}
-
-.vr-object {
-  @apply transition-transform duration-500;
-  transform-style: preserve-3d;
-}
-
-.vr-card {
-  @apply glass-panel rounded-xl shadow-lg;
-  transform-style: preserve-3d;
-  transition: transform 0.8s ease-in-out;
-}
-
-.vr-card:hover {
-  transform: rotateY(15deg) rotateX(5deg);
-}
+.animate-breathe { animation: breathe 5s ease-in-out infinite; }
