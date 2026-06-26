@@ -18,6 +18,7 @@ import { Multimodal } from "./components/Multimodal";
 import Personas from "./pages/Personas";
 import Reports from "./pages/Reports";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
 import MemoryPage from "./pages/Memory";
@@ -39,6 +40,7 @@ const App = () => (
             <div className="flex-1 overflow-auto">
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/" element={
                   <ProtectedRoute>
