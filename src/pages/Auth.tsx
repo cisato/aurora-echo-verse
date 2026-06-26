@@ -10,7 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Sparkles, Mail } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
+import auroraMark from '@/assets/aurora-mark.png';
 import { toast } from 'sonner';
 
 export default function Auth() {
@@ -78,15 +79,18 @@ export default function Auth() {
     setIsGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/auth/callback`,
       });
 
       if (result.error) {
-        toast.error(result.error.message || 'Failed to sign in with Google');
+        console.error('Google sign-in error:', result.error);
+        toast.error(result.error.message || 'Could not sign in with Google. Please try again.');
+        setIsGoogleLoading(false);
       }
+      // If redirected, browser navigates away — no need to clear loading.
     } catch (error) {
-      toast.error('Failed to sign in with Google');
-    } finally {
+      console.error('Google sign-in exception:', error);
+      toast.error('Failed to sign in with Google. Please try again.');
       setIsGoogleLoading(false);
     }
   };
@@ -123,12 +127,10 @@ export default function Auth() {
       <Card className="w-full max-w-md backdrop-blur-xl bg-card/80 border-border/50">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center mb-2">
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center">
-              <Sparkles className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <img src={auroraMark} alt="Aurora" width={64} height={64} className="h-16 w-16 object-contain drop-shadow-md" />
           </div>
           <CardTitle className="text-2xl font-bold">Welcome to Aurora</CardTitle>
-          <CardDescription>Your intelligent AI assistant</CardDescription>
+          <CardDescription>Your intelligent AI companion</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Google OAuth Button */}
