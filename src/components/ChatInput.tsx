@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Mic, Send, Volume2, VolumeX, Square, Loader2 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { Mic, ArrowUp, Volume2, VolumeX, Square, Loader2 } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
@@ -31,9 +30,13 @@ export function ChatInput({
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px";
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + "px";
     }
   }, [inputText]);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -45,23 +48,23 @@ export function ChatInput({
   const canSend = inputText.trim().length > 0 && !isTranscribing;
 
   return (
-    <div className="border-t border-border/40 bg-gradient-to-b from-background/60 to-background backdrop-blur-xl px-3 sm:px-4 pt-3 pb-3 safe-pb">
+    <div className="px-3 sm:px-4 pt-2 pb-3 safe-pb bg-gradient-to-t from-background via-background/95 to-transparent">
       {isRecording && (
-        <div className="max-w-3xl mx-auto mb-2 flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 text-destructive text-xs animate-in fade-in slide-in-from-bottom-1">
+        <div className="max-w-3xl mx-auto mb-2 flex items-center gap-3 px-4 py-2 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-xs animate-in fade-in slide-in-from-bottom-2">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75 animate-ping" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
           </span>
-          <span className="font-medium">Listening… tap stop when done</span>
-          <div className="flex items-end gap-0.5 ml-auto h-4">
-            {[0, 1, 2, 3, 4].map((i) => (
+          <span className="font-medium flex-1">Listening — tap stop when done</span>
+          <div className="flex items-end gap-0.5 h-4">
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
               <span
                 key={i}
                 className="w-0.5 bg-destructive rounded-full animate-pulse"
                 style={{
-                  height: `${30 + ((i * 37) % 70)}%`,
-                  animationDelay: `${i * 120}ms`,
-                  animationDuration: "0.8s",
+                  height: `${30 + ((i * 41) % 70)}%`,
+                  animationDelay: `${i * 110}ms`,
+                  animationDuration: "0.7s",
                 }}
               />
             ))}
@@ -72,38 +75,34 @@ export function ChatInput({
       <div className="max-w-3xl mx-auto">
         <div
           className={cn(
-            "flex items-end gap-2 p-2 rounded-3xl border bg-card/80 shadow-lg transition-all",
+            "relative flex items-end gap-1.5 p-2 rounded-[28px] border bg-card/95 backdrop-blur-xl shadow-[0_8px_30px_-12px_rgba(0,0,0,0.25)] transition-all",
             isRecording
-              ? "border-destructive/50 ring-2 ring-destructive/20"
-              : "border-border/50 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15",
+              ? "border-destructive/40 ring-2 ring-destructive/15"
+              : "border-border/60 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 focus-within:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.35)]",
           )}
         >
           <Button
             type="button"
             size="icon"
             variant="ghost"
-            className="rounded-full h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
+            className="rounded-full h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted/60"
             onClick={onToggleVoice}
-            aria-label={isVoiceEnabled ? "Mute Aurora" : "Unmute Aurora"}
+            aria-label={isVoiceEnabled ? "Mute Aurora's voice" : "Enable Aurora's voice"}
           >
             {isVoiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           </Button>
 
-          <Textarea
+          <textarea
             ref={textareaRef}
             value={inputText}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              isTranscribing
-                ? "Transcribing…"
-                : isRecording
-                ? "Listening…"
-                : "Talk to Aurora…"
+              isTranscribing ? "Transcribing your voice…" : isRecording ? "Listening…" : "Message Aurora"
             }
             disabled={isTranscribing}
-            className="flex-1 min-h-[40px] max-h-[160px] resize-none bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-2 text-[15px] leading-snug shadow-none"
             rows={1}
+            className="flex-1 min-h-[36px] max-h-[200px] resize-none bg-transparent border-0 outline-none focus:outline-none px-1.5 py-2 text-[15px] leading-snug placeholder:text-muted-foreground/60 disabled:opacity-60"
           />
 
           <Button
@@ -111,19 +110,19 @@ export function ChatInput({
             size="icon"
             variant="ghost"
             className={cn(
-              "rounded-full h-10 w-10 shrink-0 transition-all",
+              "rounded-full h-9 w-9 shrink-0 transition-all",
               isRecording
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
             )}
             onClick={onToggleRecording}
             disabled={isTranscribing}
-            aria-label={isRecording ? "Stop recording" : "Start voice input"}
+            aria-label={isRecording ? "Stop recording" : "Voice input"}
           >
             {isTranscribing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : isRecording ? (
-              <Square className="h-4 w-4 fill-current" />
+              <Square className="h-3.5 w-3.5 fill-current" />
             ) : (
               <Mic className="h-4 w-4" />
             )}
@@ -136,16 +135,16 @@ export function ChatInput({
             disabled={!canSend}
             aria-label="Send message"
             className={cn(
-              "rounded-full h-10 w-10 shrink-0 transition-all",
+              "rounded-full h-9 w-9 shrink-0 transition-all duration-200",
               canSend
-                ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg hover:scale-105"
-                : "bg-muted text-muted-foreground",
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
+                : "bg-muted/70 text-muted-foreground/60",
             )}
           >
-            <Send className="h-4 w-4" />
+            <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground/70 text-center mt-2">
+        <p className="text-[10px] text-muted-foreground/60 text-center mt-2 px-4">
           Aurora can make mistakes — verify anything important.
         </p>
       </div>
