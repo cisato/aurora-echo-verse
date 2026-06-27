@@ -11,12 +11,12 @@ export default function AuthCallback() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         clearTimeout(timeout);
-        navigate("/", { replace: true });
+        navigate("/app", { replace: true });
       }
     });
 
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate("/", { replace: true });
+      if (data.session) navigate("/app", { replace: true });
     });
 
     timeout = setTimeout(() => {
