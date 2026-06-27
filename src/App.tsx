@@ -26,6 +26,11 @@ import ApiKeys from "./pages/ApiKeys";
 import ApiAnalytics from "./pages/ApiAnalytics";
 import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
+import Landing from "./pages/Landing";
+import Demo from "./pages/Demo";
+import Privacy from "./pages/Privacy";
+import Security from "./pages/Security";
+import AdminMetrics from "./pages/AdminMetrics";
 
 const queryClient = new QueryClient();
 
@@ -42,7 +47,14 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/" element={
+                <Route path="/" element={<Landing />} />
+                <Route path="/demo" element={<Demo />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/security" element={<Security />} />
+                <Route path="/admin/metrics" element={
+                  <ProtectedRoute><AdminMetrics /></ProtectedRoute>
+                } />
+                <Route path="/app" element={
                   <ProtectedRoute>
                     <Index />
                   </ProtectedRoute>
