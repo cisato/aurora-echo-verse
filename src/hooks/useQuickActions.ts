@@ -40,7 +40,7 @@ export const useQuickActions = (chatState: UseChatState) => {
         toast.info("Reminder view not implemented in demo");
         break;
       case "memory":
-        navigate("/");
+        navigate("/app");
         // Use custom event to communicate with parent component
         window.dispatchEvent(new CustomEvent('setMode', { detail: { mode: "memory" } }));
         break;

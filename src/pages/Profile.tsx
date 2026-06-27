@@ -56,7 +56,7 @@ export default function Profile() {
         <Button
           variant="ghost"
           className="mb-6"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/app')}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Aurora

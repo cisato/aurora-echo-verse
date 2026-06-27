@@ -61,7 +61,7 @@ export default function Auth() {
     const { error } = await signIn(email, password);
     setIsLoading(false);
     if (!error) {
-      navigate('/');
+      navigate('/app');
     }
   };
 
@@ -71,7 +71,7 @@ export default function Auth() {
     const { error } = await signUp(email, password, displayName);
     setIsLoading(false);
     if (!error) {
-      navigate('/');
+      navigate('/app');
     }
   };
 
