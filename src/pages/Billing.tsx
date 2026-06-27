@@ -112,7 +112,7 @@ export default function Billing() {
                     {tier === "free" ? "View plans" : "Change plan"}
                   </Button>
                   <Button variant="outline" asChild className="rounded-xl h-11 w-full sm:w-auto">
-                    <Link to="/">Back to app</Link>
+                    <Link to="/app">Back to app</Link>
                   </Button>
                 </div>
               </>

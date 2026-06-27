@@ -9,7 +9,7 @@ export function MultimodalCapabilitiesCard() {
   const navigate = useNavigate();
   
   const handleExploreMultimodal = () => {
-    navigate("/");
+    navigate("/app");
     // Use setTimeout to ensure navigation completes before triggering mode change
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('quickAction', { 
