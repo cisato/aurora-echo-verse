@@ -50,10 +50,7 @@ export function ConversationHistory({
 }: ConversationHistoryProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const { settings, updateSetting } = useUserSettings();
 
-  const currentMode = COMPANION_MODES.find(m => m.id === settings.companion_mode) || COMPANION_MODES[0];
-  const CurrentIcon = currentMode.icon;
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations;
