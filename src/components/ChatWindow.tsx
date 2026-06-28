@@ -20,7 +20,8 @@ export function ChatWindow() {
   const [displayMessages, setDisplayMessages] = useState<ChatMessageProps[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Chat history sidebar is LOCKED collapsed by default — user opens it manually.
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [currentEmotionMode, setCurrentEmotionMode] = useState<string>("default");
 
   const { user } = useAuth();
@@ -139,9 +140,25 @@ export function ChatWindow() {
       conversationId = newConv.id;
     }
 
-    // Analyze emotion of user message (non-blocking)
+    // Analyze emotion of user message + auto-switch companion mode (subtle, no UI announcement)
     analyzeEmotion(messageText).then(emotionResult => {
       setCurrentEmotionMode(emotionResult.responseMode);
+      const modeMap: Record<string, string> = {
+        support: 'therapist_lite',
+        listener: 'therapist_lite',
+        motivator: 'casual',
+        challenger: 'strategic',
+        analyst: 'assistant',
+        default: settings.companion_mode || 'assistant',
+      };
+      const nextMode = modeMap[emotionResult.responseMode] || (settings.companion_mode || 'assistant');
+      if (nextMode !== settings.companion_mode) {
+        // Fire-and-forget; user sees no popup, Aurora's tone just shifts.
+        import('@/integrations/supabase/client').then(({ supabase }) => {
+          if (!user?.id) return;
+          supabase.from('user_settings').update({ companion_mode: nextMode }).eq('user_id', user.id);
+        }).catch(() => {});
+      }
     });
 
     const userMessage: ChatMessageProps = {

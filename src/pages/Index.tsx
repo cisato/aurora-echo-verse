@@ -5,19 +5,28 @@ import { Onboarding } from "@/components/welcome/Onboarding";
 import { useChatState } from "@/hooks/useChatState";
 import { ModeContent } from "@/components/mode-content/ModeContent";
 import { useQuickActions } from "@/hooks/useQuickActions";
+import { useProfile } from "@/hooks/useProfile";
 
 const Index = () => {
   const [activeMode, setActiveMode] = useState("dashboard");
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const { profile, isLoading: profileLoading } = useProfile();
 
   const dummySpeakText = (text: string) => console.log("Speaking:", text);
   const { handleSendMessage } = useChatState(true, dummySpeakText);
   const { handleActionRequest } = useQuickActions({ handleSendMessage });
 
+  // Onboarding shows only when: profile loaded AND no display_name AND no localStorage visited flag.
+  // Once answered, both profile.display_name and localStorage persist — never shows again.
   useEffect(() => {
+    if (profileLoading) return;
     const visited = localStorage.getItem("aurora_has_visited");
-    if (!visited) setShowOnboarding(true);
+    const hasName = !!(profile?.display_name && profile.display_name.trim());
+    if (!visited && !hasName) setShowOnboarding(true);
+    else if (hasName && !visited) localStorage.setItem("aurora_has_visited", "true");
+  }, [profile, profileLoading]);
 
+  useEffect(() => {
     const lastMode = localStorage.getItem("aurora_last_mode");
     if (lastMode) setActiveMode(lastMode);
 
@@ -43,9 +52,6 @@ const Index = () => {
     localStorage.setItem("aurora_focus", data.focus);
     setShowOnboarding(false);
     handleModeChange("chat");
-    if (data.mode === "voice") {
-      setTimeout(() => window.dispatchEvent(new CustomEvent("quickAction", { detail: { action: "voice" } })), 300);
-    }
   };
 
   return (
@@ -54,7 +60,7 @@ const Index = () => {
       <Sidebar onModeChange={handleModeChange} activeMode={activeMode} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <MobileNav onModeChange={handleModeChange} activeMode={activeMode} />
-        <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        <main className="flex-1 overflow-auto">
           <ModeContent activeMode={activeMode} />
         </main>
       </div>

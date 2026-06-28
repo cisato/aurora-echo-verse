@@ -4,29 +4,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Conversation } from '@/hooks/useConversations';
 import {
-  MessageSquare, Plus, Trash2, ChevronLeft, ChevronRight,
-  Briefcase, Sprout, Heart, Zap, Coffee, Palette, Code, ChevronDown, Search,
+  MessageSquare, Plus, Trash2, ChevronLeft, ChevronRight, Search,
 } from 'lucide-react';
 import { isToday, isYesterday, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useUserSettings } from '@/hooks/useUserSettings';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import auroraMark from '@/assets/aurora-mark.png';
 
-const COMPANION_MODES = [
-  { id: 'assistant', label: 'Assistant', icon: Briefcase, color: 'text-blue-500' },
-  { id: 'growth_partner', label: 'Growth Partner', icon: Sprout, color: 'text-green-500' },
-  { id: 'therapist_lite', label: 'Supportive', icon: Heart, color: 'text-rose-500' },
-  { id: 'strategic', label: 'Strategic', icon: Zap, color: 'text-amber-500' },
-  { id: 'casual', label: 'Casual', icon: Coffee, color: 'text-orange-500' },
-  { id: 'creative', label: 'Creative', icon: Palette, color: 'text-purple-500' },
-  { id: 'technical', label: 'Technical', icon: Code, color: 'text-cyan-500' },
-];
 
 interface ConversationHistoryProps {
   conversations: Conversation[];
@@ -67,10 +50,7 @@ export function ConversationHistory({
 }: ConversationHistoryProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const { settings, updateSetting } = useUserSettings();
 
-  const currentMode = COMPANION_MODES.find(m => m.id === settings.companion_mode) || COMPANION_MODES[0];
-  const CurrentIcon = currentMode.icon;
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations;
@@ -224,42 +204,12 @@ export function ConversationHistory({
         </div>
       </ScrollArea>
 
-      {/* Companion mode footer */}
-      <div className="border-t border-border/40 p-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2.5 h-10 rounded-lg px-2.5 hover:bg-muted/50"
-            >
-              <div className={cn("h-7 w-7 rounded-md bg-muted/60 flex items-center justify-center", currentMode.color)}>
-                <CurrentIcon className="h-3.5 w-3.5" />
-              </div>
-              <div className="flex flex-col items-start min-w-0 flex-1">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 leading-none">Mode</span>
-                <span className="text-xs font-medium truncate leading-tight mt-0.5">{currentMode.label}</span>
-              </div>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="top" className="w-56">
-            {COMPANION_MODES.map(mode => {
-              const Icon = mode.icon;
-              const isActive = settings.companion_mode === mode.id;
-              return (
-                <DropdownMenuItem
-                  key={mode.id}
-                  onClick={() => updateSetting('companion_mode', mode.id)}
-                  className={cn("flex items-center gap-2 cursor-pointer", isActive && "bg-accent")}
-                >
-                  <Icon className={cn("h-4 w-4", mode.color)} />
-                  <span className="text-sm">{mode.label}</span>
-                  {isActive && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+      {/* Auto mood footer (subtle, no picker — Aurora auto-adapts) */}
+      <div className="border-t border-border/40 p-3">
+        <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground/80">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="truncate">Aurora adapts to your mood</span>
+        </div>
       </div>
     </div>
   );

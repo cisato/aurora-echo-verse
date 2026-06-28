@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AuroraAvatar } from "@/components/AuroraAvatar";
 import { MessageCircle, Mic, Sparkles } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
+import auroraMark from "@/assets/aurora-mark.png";
 
 interface OnboardingProps {
   onComplete: (data: { name: string; focus: string; mode: string }) => void;
@@ -12,18 +13,22 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [focus, setFocus] = useState("");
-  const [mode, setMode] = useState("");
+  const [, setMode] = useState("");
+  const { updateProfile } = useProfile();
 
   const next = () => setStep((s) => s + 1);
-  const finish = (chosenMode: string) => {
-    onComplete({ name: name.trim() || "Friend", focus: focus || "companionship", mode: chosenMode });
+  const finish = async (chosenMode: string) => {
+    const finalName = name.trim() || "Friend";
+    // Persist name to profile so the popup never shows again — across devices.
+    try { await updateProfile({ display_name: finalName }); } catch { /* non-blocking */ }
+    onComplete({ name: finalName, focus: focus || "companionship", mode: chosenMode });
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex items-center justify-center p-6 safe-pt safe-pb">
       <div className="w-full max-w-md bg-card border border-border rounded-3xl shadow-2xl p-8 space-y-6">
         <div className="flex justify-center">
-          <AuroraAvatar isActive size="lg" />
+          <img src={auroraMark} alt="Aurora" width={72} height={72} className="h-18 w-18 object-contain drop-shadow-md" />
         </div>
 
         {step === 0 && (
