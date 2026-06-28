@@ -20,7 +20,8 @@ export function ChatWindow() {
   const [displayMessages, setDisplayMessages] = useState<ChatMessageProps[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Chat history sidebar is LOCKED collapsed by default — user opens it manually.
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [currentEmotionMode, setCurrentEmotionMode] = useState<string>("default");
 
   const { user } = useAuth();

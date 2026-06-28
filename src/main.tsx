@@ -5,17 +5,20 @@ import App from './App.tsx'
 import './index.css'
 import { registerSW } from 'virtual:pwa-register';
 
-// Register service worker for PWA
+// Bootstrap theme BEFORE first paint so dark/light is persistent across every page (auth → app).
+(function bootstrapTheme() {
+  try {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const dark = saved ? saved === 'dark' : prefersDark;
+    document.documentElement.classList.toggle('dark', dark);
+  } catch {/* ignore */}
+})();
+
 if ('serviceWorker' in navigator) {
   registerSW({
-    onNeedRefresh() {
-      // This function is called when a new version is available
-      console.log('New content is available, please refresh');
-    },
-    onOfflineReady() {
-      // This function is called when the app is ready to work offline
-      console.log('App is ready for offline use');
-    },
+    onNeedRefresh() { console.log('New content is available, please refresh'); },
+    onOfflineReady() { console.log('App is ready for offline use'); },
   });
 }
 
