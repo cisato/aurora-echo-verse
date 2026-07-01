@@ -130,6 +130,69 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_channel_links: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          external_id: string
+          id: string
+          metadata: Json
+          platform: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          external_id: string
+          id?: string
+          metadata?: Json
+          platform: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          external_id?: string
+          id?: string
+          metadata?: Json
+          platform?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bot_link_codes: {
+        Row: {
+          code: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          platform: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          platform: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          platform?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversation_summaries: {
         Row: {
           conversation_id: string | null
