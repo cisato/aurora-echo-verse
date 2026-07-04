@@ -157,6 +157,9 @@
     background-clip: text;
     color: transparent;
   }
+  .shadow-paper { box-shadow: var(--shadow-paper); }
+  .shadow-lift  { box-shadow: var(--shadow-lift); }
+  .shadow-glow  { box-shadow: var(--shadow-glow); }
 }
 
 @keyframes breathe {
@@ -164,3 +167,22 @@
   50% { transform: scale(1.04); opacity: 1; }
 }
 .animate-breathe { animation: breathe 5s ease-in-out infinite; }
+
+@keyframes shimmer-line {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted-foreground) / 0.5) 0%,
+    hsl(var(--foreground)) 50%,
+    hsl(var(--muted-foreground) / 0.5) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-line 2.2s ease-in-out infinite;
+}
+
