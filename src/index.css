@@ -7,35 +7,50 @@
 @layer base {
   :root {
     /* Cream on Forest Green — Light surfaces */
-    --background: 40 30% 94%;
-    --foreground: 155 35% 12%;
+    --background: 40 30% 95%;
+    --foreground: 155 30% 14%;
 
-    --card: 40 35% 96%;
-    --card-foreground: 155 35% 12%;
+    --card: 40 35% 97%;
+    --card-foreground: 155 30% 14%;
 
-    --popover: 40 35% 97%;
-    --popover-foreground: 155 35% 12%;
+    --popover: 40 35% 98%;
+    --popover-foreground: 155 30% 14%;
 
-    --primary: 150 40% 22%;
-    --primary-foreground: 40 35% 96%;
+    --primary: 150 38% 24%;
+    --primary-foreground: 40 35% 97%;
 
-    --secondary: 140 18% 86%;
-    --secondary-foreground: 155 35% 15%;
+    --secondary: 140 20% 88%;
+    --secondary-foreground: 155 30% 16%;
 
-    --muted: 40 20% 88%;
-    --muted-foreground: 150 15% 35%;
+    --muted: 40 22% 90%;
+    --muted-foreground: 150 12% 38%;
 
-    --accent: 20 55% 60%;
-    --accent-foreground: 40 35% 98%;
+    --accent: 40 55% 55%;              /* muted gold */
+    --accent-foreground: 155 40% 12%;
 
-    --destructive: 5 70% 50%;
+    --destructive: 5 65% 48%;
     --destructive-foreground: 40 35% 98%;
 
-    --border: 140 15% 80%;
-    --input: 140 15% 82%;
-    --ring: 150 40% 35%;
+    --border: 140 14% 82%;
+    --input: 140 14% 84%;
+    --ring: 150 38% 32%;
 
     --radius: 1.25rem;
+
+    /* Layered surface + accent tokens */
+    --ivory: 40 40% 97%;
+    --sage: 140 22% 68%;
+    --forest: 150 38% 24%;
+    --gold: 40 55% 55%;
+    --charcoal: 155 30% 14%;
+    --surface-raised: 40 38% 98%;
+    --surface-sunken: 40 20% 90%;
+
+    /* Soft, paper-like shadows */
+    --shadow-paper: 0 1px 2px hsl(150 30% 15% / 0.04), 0 2px 8px hsl(150 30% 15% / 0.05);
+    --shadow-lift:  0 8px 30px -12px hsl(150 30% 15% / 0.18);
+    --shadow-glow:  0 10px 40px -20px hsl(var(--primary) / 0.35);
+
 
     --sidebar-background: 155 35% 14%;
     --sidebar-foreground: 40 30% 92%;
