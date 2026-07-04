@@ -1,70 +1,77 @@
+# Aurora Evolution — Sequenced Plan
 
-## 1. Fix Google Sign-In
+Executed one phase per turn. You approve each phase before I move to the next. Existing working functionality is preserved unless a step explicitly replaces it.
 
-The `handleGoogleSignIn` flow is correct in code, but Google OAuth fails when the provider isn't actually enabled in Cloud, or when the redirect drops the session because the user lands on `/` (Index) before `onAuthStateChange` resolves. Fix path:
+---
 
-- Call the social-auth configuration tool to enable Google (idempotent — confirms it's wired with Lovable's managed credentials, fixing the common "Unsupported provider" / silent-fail case).
-- Keep `redirect_uri: window.location.origin` (correct per docs — not a protected route).
-- Add a small `/auth/callback` handler that waits for `supabase.auth.getSession()` to hydrate before navigating, so users coming back from Google aren't bounced to `/auth` by `ProtectedRoute` during the brief loading window.
-- Surface a clearer error toast and console log when `result.error` is returned so we can diagnose future failures from the user side.
+## Phase 1 — UI/UX + Chat Polish  *(starting now)*
 
-## 2. Chat Interface Redesign
+**Design system refresh (`src/index.css`, `tailwind.config.ts`)**
+- Keep cream-on-forest base; add layered tokens: `--ivory`, `--sage`, `--gold`, `--charcoal`, `--surface-raised`, `--surface-sunken`.
+- Softer shadows (`--shadow-paper`, `--shadow-lift`), larger radius scale, generous spacing rhythm.
+- Verify light/dark parity — dark theme uses warm charcoal, not pure black.
+- Type scale tuned for reading: Fraunces display, Inter Tight body, comfortable line-height.
 
-Replace the current bespoke chat with **AI Elements** primitives (per the chat-ui-composition contract) and a distinctive Aurora visual layer.
+**Chat surface (`ChatWindow`, `ChatMessage`, `Messages`, `ChatInput`)**
+- Assistant text renders directly on canvas (no bubble), user bubbles get refined forest→sage gradient with gold hairline.
+- Timestamps become natural ("just now", "2m ago") and appear on hover.
+- Message actions: Copy, Edit (user only), Bookmark, Regenerate (assistant only) — icon row on hover.
+- Better markdown: refined code blocks with language chip + copy, blockquote styling, list rhythm.
+- Loading state: replace three-dot pulse with a single breathing shimmer line ("Aurora is thinking…" removed on stream start).
+- Smooth auto-scroll only when user is near bottom.
 
-Composer (`ChatInput.tsx`):
-- Rebuild on `PromptInput` + `PromptInputTextarea` + `PromptInputFooter` with mic, voice toggle, and submit in the footer (fixes the cramped 4-button pill on 423px viewports).
-- Larger textarea, auto-grow up to ~200px, generous bottom padding so text doesn't sit under the submit button.
-- Recording state becomes an inline shimmer ribbon above the composer with a live waveform.
+**Empty state & composer**
+- Empty canvas: quiet greeting + 3 contextual suggestion cards (not 6), pulled from time-of-day + recent memories.
+- Composer: single rounded surface, mic + send only, subtle focus ring, keyboard shortcuts hint.
 
-Messages (`ChatMessage.tsx` + `Messages.tsx`):
-- Assistant messages: **no background bubble** (per contract) — markdown rendered directly on the chat surface with a small Aurora avatar gutter, subtle hover actions (copy, regenerate, speak).
-- User messages: filled `bg-primary text-primary-foreground` bubble (already correct), tightened radius, timestamp on hover only.
-- Use `Shimmer` "Thinking…" for the loading state instead of bouncing dots.
-- Empty state: keep the suggestion cards but redesign as a 2x2 editorial grid with the generated Aurora mark (not Sparkles) and a warmer headline.
+**Out of scope this phase:** memory features, security, new AI behaviors.
 
-Sidebar (`ConversationHistory.tsx`):
-- Migrate to shadcn `Sidebar` (`SidebarProvider`, collapsible="icon") so it behaves correctly on mobile (offcanvas) and desktop (icon-rail).
-- Group conversations by **Today / Yesterday / Last 7 days / Older** with `date-fns`.
-- Inline rename (double-click title), hover-reveal delete with confirm, and a pinned "New chat" CTA at top.
-- Move the Companion Mode dropdown into a dedicated footer section with the active mode color-dotted; current cramped header gets simpler.
-- Add search box (filter by title) at the top.
+---
 
-Generate a small Aurora wordmark/logo (premium image) to replace the `Sparkles` placeholder in the auth card and empty state per the chat-ui-composition identity rule.
+## Phase 2 — Security & Trust Hardening
+- Flip `verify_jwt = true` on user-context functions (`chat`, `memory-extract`, `emotion-analyze`, `proactive-insights`, `daily-summary`, `send-report-email`, `multimodal`, `transcribe`). Derive `userId` from `getClaims()`, stop trusting request-body IDs.
+- Keep `verify_jwt = false` only for `paystack-webhook` (signature-verified) and `aurora-api` (API-key-verified).
+- Reconcile pricing: single source in DB / shared constant, remove hardcoded 9500 vs 4500 drift.
+- Audit localStorage: move anything sensitive (voice settings are fine; nothing user-identifying should live there).
+- Add rate limits on `chat` and `transcribe`.
 
-## 3. Investor Recommendation — Honest Take
+## Phase 3 — Human Conversation Engine
+- Rewrite `chat` system prompt: contractions, variable rhythm, no repetitive openings, no "I looked that up" meta-talk, honest continuity ("Last time we were exploring…" not "I missed you").
+- Emoji intelligence: track user's emoji-per-message ratio in `user_settings`, mirror it. Sensitive topics → restraint enforced in prompt.
+- Response shaping: short answers stay short; no forced summaries.
 
-**Would I recommend Aurora to an investor today? Not yet.** Here is why, with the fixes I'd ship:
+## Phase 4 — Memory Intelligence (Relationship Layer)
+- **Memory Confidence & Trust Levels:** each memory gets `confidence` (0-1) and `source` (explicit / inferred / observed). Surface in Memory Dashboard.
+- **Memory Repair:** inline "that's not quite right" on any Aurora reference to a memory → opens edit sheet.
+- **Private Vault:** locked memories excluded from retrieval unless user unlocks per session.
+- **AI Receipts:** when Aurora references a memory, a small "why I remembered this" chip reveals the source memory.
+- **Memory Map (light):** Memory Dashboard gets a graph view of related memories (no heavy viz lib; SVG force layout).
 
-| Concern | Why it blocks investment | Fix |
-|---|---|---|
-| **Undifferentiated positioning** | "AI companion with memory" is a crowded category (Pi, Replika, ChatGPT memory, Character.ai). No single sentence explains why Aurora wins. | Add a public landing page with a sharp wedge: e.g. "The reflective AI companion for African knowledge workers" — paired with Paystack/NGN pricing already in code. |
-| **No real moat shown in product** | Memory + personas exist but aren't visible to a first-time visitor. | Build a public marketing route (`/`) with screenshots, the proactive-insights demo, growth timeline preview, and a clear "Try free" CTA — currently `/` is gated. |
-| **Auth friction** | Google sign-in is broken (see fix #1); magic link + password + Google all visible at once feels noisy. | Fix Google, demote magic link to "More options". |
-| **Monetization unverified** | Paystack functions exist but no analytics, no churn signal, no proof anyone has paid. | Add a Reports tab the founder can show investors: MAU, paid conversions, ritual streaks. Most edge functions exist; just need a `/admin/metrics` view. |
-| **Trust & safety story missing** | Investors will ask: what happens to user memories? Where is data stored? | Add a public `/privacy` + `/security` page describing RLS, per-user isolation, memory deletion controls, and the existing has_role pattern. |
-| **No demo without signup** | Investors won't create an account to evaluate. | Add a sandbox `/demo` route with a scripted Aurora conversation (read-only) so a VC can experience it in 30 seconds. |
-| **Mobile polish gaps** | At 423px the chat composer crowds, sidebar covers content. | Covered by the redesign above. |
+## Phase 5 — Companion Growth
+- Relationship Timeline (visible history of milestones, not scores).
+- Reflection Engine (weekly quiet prompt, opt-in).
+- Decision Journal + Contradiction Detector (surfaces gently, never judgmental).
+- Silent Pattern Discovery feeds Proactive Insights.
 
-I will not implement the marketing/privacy/demo pages in this plan unless you approve them — they are large enough to be their own conversation. **This plan only ships fixes #1 and #2 plus this written investor brief.** I'll queue the investor-readiness items as a follow-up plan you can approve separately.
+## Phase 6 — Companion Behaviors
+- Curiosity Mode, Thinking Styles, Context Lens as sidebar toggles.
+- Confidence Meter on answers (subtle).
+- AI Undo (session-scoped, 5-minute window).
+- Multi-version answers generated in background, revealed via "show another take".
 
-## Files Changed
+## Phase 7 — Life Spaces
+- Extend `conversations` with `space_id`; new `spaces` table with own memory/goals/settings.
+- Space switcher in sidebar; memory retrieval scoped per space.
 
-- `src/pages/Auth.tsx` — clearer Google error handling, replace Sparkles with Aurora mark.
-- `src/App.tsx` — add `/auth/callback` route.
-- New `src/pages/AuthCallback.tsx` — hydrate session then navigate.
-- Install AI Elements: `conversation`, `message`, `prompt-input`, `shimmer`.
-- `src/components/ChatInput.tsx` — rebuilt on `PromptInput`.
-- `src/components/ChatMessage.tsx` — assistant uses `MessageResponse`, no bg.
-- `src/components/chat/Messages.tsx` — `Conversation`/`ConversationContent`, new empty state.
-- `src/components/ConversationHistory.tsx` — shadcn `Sidebar`, grouped + searchable.
-- `src/components/ChatWindow.tsx` — wire `SidebarProvider`, pass new props.
-- `src/assets/aurora-mark.png` — new generated logo.
-- Tool call: `configure_social_auth` providers=["google"] to confirm Google is enabled.
+## Phase 8 — Honesty Pass
+- Search / Weather / Code pages: either wire real providers (SerpAPI / OpenWeather / sandboxed exec) or replace with honest "coming soon" state. No fabricated results.
 
-## Technical Notes
+---
 
-- AI Elements components live under `src/components/ai-elements/` after install; we compose, not replace.
-- Sidebar uses `collapsible="offcanvas"` on mobile via the `useIsMobile` hook to avoid covering the chat at 423px.
-- All colors via semantic tokens (`bg-card`, `text-foreground`, `bg-primary`); no hardcoded hex.
-- `AuthCallback` listens via `onAuthStateChange` with a 5s timeout fallback to `/auth?error=callback_timeout`.
+## Execution rules
+- One phase per turn. I ship, you review, you approve next.
+- No new duplicate systems — refactor existing files.
+- Every change keeps the app running; no half-migrated states left between turns.
+- After each phase I run typecheck and a quick Playwright smoke on the affected screens.
+
+**Approve to start Phase 1, or tell me to reorder.**
