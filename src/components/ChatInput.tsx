@@ -75,10 +75,10 @@ export function ChatInput({
       <div className="max-w-3xl mx-auto">
         <div
           className={cn(
-            "relative flex items-end gap-1.5 p-2 rounded-[28px] border bg-card/95 backdrop-blur-xl shadow-[0_8px_30px_-12px_rgba(0,0,0,0.25)] transition-all",
+            "relative flex items-end gap-1.5 p-2 rounded-[26px] border bg-card/90 backdrop-blur-xl shadow-paper transition-all",
             isRecording
               ? "border-destructive/40 ring-2 ring-destructive/15"
-              : "border-border/60 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 focus-within:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.35)]",
+              : "border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15 focus-within:shadow-lift",
           )}
         >
           <Button
@@ -137,17 +137,22 @@ export function ChatInput({
             className={cn(
               "rounded-full h-9 w-9 shrink-0 transition-all duration-200",
               canSend
-                ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-paper hover:shadow-lift active:scale-95"
                 : "bg-muted/70 text-muted-foreground/60",
             )}
           >
             <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground/60 text-center mt-2 px-4">
-          Aurora can make mistakes — verify anything important.
+        <p className="text-[10.5px] text-muted-foreground/55 text-center mt-2 px-4">
+          <kbd className="font-sans px-1 py-0.5 rounded border border-border/60 text-[9.5px] mx-0.5">Enter</kbd>
+          to send ·
+          <kbd className="font-sans px-1 py-0.5 rounded border border-border/60 text-[9.5px] mx-0.5">Shift</kbd>
+          <kbd className="font-sans px-1 py-0.5 rounded border border-border/60 text-[9.5px] mx-0.5">Enter</kbd>
+          for a new line · Aurora can make mistakes.
         </p>
       </div>
     </div>
   );
 }
+
