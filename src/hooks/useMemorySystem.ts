@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { getAuthHeaders } from '@/lib/edgeAuth';
 
 const MEMORY_EXTRACT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/memory-extract`;
 const EMOTION_ANALYZE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/emotion-analyze`;
@@ -66,12 +67,11 @@ export function useMemorySystem() {
     setIsAnalyzingEmotion(true);
 
     try {
+      const headers = await getAuthHeaders();
+      if (!headers) return defaultResult;
       const resp = await fetch(EMOTION_ANALYZE_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers,
         body: JSON.stringify({ text }),
       });
 
@@ -96,15 +96,13 @@ export function useMemorySystem() {
 
     setIsExtracting(true);
     try {
+      const headers = await getAuthHeaders();
+      if (!headers) return;
       const resp = await fetch(MEMORY_EXTRACT_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers,
         body: JSON.stringify({
           conversation,
-          userId: user.id,
           conversationId,
         }),
       });
