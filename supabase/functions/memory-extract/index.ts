@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { requireUser, isAuthResponse, corsHeaders } from "../_shared/auth.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,10 +8,13 @@ serve(async (req) => {
   }
 
   try {
-    const { conversation, userId, conversationId } = await req.json();
+    const auth = await requireUser(req);
+    if (isAuthResponse(auth)) return auth;
+    const { conversation, conversationId } = await req.json();
+    const userId = auth.userId;
 
-    if (!userId || !conversation || conversation.length === 0) {
-      return new Response(JSON.stringify({ success: false, error: "Missing required fields" }), {
+    if (!conversation || conversation.length === 0) {
+      return new Response(JSON.stringify({ success: false, error: "Missing conversation" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

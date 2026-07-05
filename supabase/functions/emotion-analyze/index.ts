@@ -1,9 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { requireUser, isAuthResponse, corsHeaders } from "../_shared/auth.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,6 +7,8 @@ serve(async (req) => {
   }
 
   try {
+    const auth = await requireUser(req);
+    if (isAuthResponse(auth)) return auth;
     const { text } = await req.json();
 
     if (!text) {
