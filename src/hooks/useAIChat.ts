@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -33,13 +34,19 @@ export function useAIChat(persona: string = 'assistant') {
     abortControllerRef.current = new AbortController();
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Please sign in to chat with Aurora.');
+        throw new Error('Not authenticated');
+      }
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ messages, persona, userName, userId, companionMode }),
+        body: JSON.stringify({ messages, persona, userName, companionMode }),
         signal: abortControllerRef.current.signal,
       });
 

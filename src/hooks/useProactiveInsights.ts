@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { getAuthHeaders } from '@/lib/edgeAuth';
 
 const PROACTIVE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proactive-insights`;
 const DAILY_SUMMARY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/daily-summary`;
@@ -39,13 +40,12 @@ export function useProactiveInsights() {
     if (!user) return [];
     setIsLoadingInsights(true);
     try {
+      const headers = await getAuthHeaders();
+      if (!headers) return [];
       const resp = await fetch(PROACTIVE_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ userId: user.id }),
+        headers,
+        body: JSON.stringify({}),
       });
       if (!resp.ok) return [];
       const data = await resp.json();
@@ -70,13 +70,12 @@ export function useProactiveInsights() {
     if (!user) return null;
     setIsGeneratingSummary(true);
     try {
+      const headers = await getAuthHeaders();
+      if (!headers) return null;
       const resp = await fetch(DAILY_SUMMARY_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ userId: user.id, type }),
+        headers,
+        body: JSON.stringify({ type }),
       });
       if (!resp.ok) return null;
       return await resp.json();

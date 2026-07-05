@@ -1,11 +1,9 @@
 // Speech-to-text via Lovable AI Gateway (openai/gpt-4o-mini-transcribe).
 // Accepts multipart/form-data with an "audio" file field; returns { text }.
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { requireUser, isAuthResponse, corsHeaders as baseCors } from "../_shared/auth.ts";
+
+const corsHeaders = { ...baseCors, "Access-Control-Allow-Methods": "POST, OPTIONS" };
 
 const MAX_BYTES = 24 * 1024 * 1024; // 24 MiB
 
@@ -33,6 +31,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  const auth = await requireUser(req);
+  if (isAuthResponse(auth)) return auth;
 
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) {
