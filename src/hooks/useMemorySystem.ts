@@ -242,6 +242,33 @@ export function useMemorySystem() {
     }
   }, [user]);
 
+  // Semantic memory search — hits the retrieval index (vector similarity).
+  const searchMemory = useCallback(async (
+    query: string,
+    opts?: { limit?: number; includeSensitive?: boolean }
+  ): Promise<MemoryMatch[]> => {
+    if (!user || !query.trim()) return [];
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) return [];
+      const resp = await fetch(MEMORY_SEARCH_URL, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query,
+          limit: opts?.limit ?? 8,
+          includeSensitive: opts?.includeSensitive ?? false,
+        }),
+      });
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      return (data?.matches ?? []) as MemoryMatch[];
+    } catch (e) {
+      console.error('searchMemory failed:', e);
+      return [];
+    }
+  }, [user]);
+
   return {
     isExtracting,
     isAnalyzingEmotion,
@@ -253,5 +280,6 @@ export function useMemorySystem() {
     fetchSummaries,
     fetchEmotionalPatterns,
     fetchIdentityEvolution,
+    searchMemory,
   };
 }
