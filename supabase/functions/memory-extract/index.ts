@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireUser, isAuthResponse, corsHeaders } from "../_shared/auth.ts";
+import { embedMany, memoryFactText } from "../_shared/embed.ts";
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -56,6 +58,7 @@ Return ONLY valid JSON matching this exact schema:
       "category": "goal|interest|relationship|project|trigger|motivator|pattern|skill|value|fact",
       "key": "short label",
       "value": "the actual insight",
+      "tags": ["short-tag", "another-tag"],
       "confidence": 0.0-1.0,
       "source": "explicit|inferred|observed"
     }
@@ -90,6 +93,7 @@ Rules:
 - Be conservative with confidence scores
 - Focus on durable, long-term relevant facts (not ephemeral details)
 - Max 8 memory_facts per call
+- Tags: 1-4 short lowercase tokens per fact (e.g. "career", "family", "health", "python", "anxiety"). No spaces — use dashes.
 - Keep summary.text concise and humanizing
 - Skip categories with no evidence`,
           },
@@ -133,43 +137,62 @@ Rules:
 
     const results: any = { memory_facts: 0, summary: false, emotional_patterns: 0, identity_signals: 0 };
 
-    // Store memory facts (upsert by key+category)
+    // Store memory facts (upsert by key+category) + embed each for semantic retrieval
     if (extracted.memory_facts && extracted.memory_facts.length > 0) {
-      for (const fact of extracted.memory_facts) {
-        if (!fact.category || !fact.key || !fact.value) continue;
+      const validFacts = extracted.memory_facts.filter(
+        (f: any) => f && f.category && f.key && f.value
+      );
 
-        // Check if fact already exists
+      // Batch-embed everything in a single request so retrieval works immediately.
+      const factTexts = validFacts.map((f: any) => memoryFactText({
+        category: f.category, key: f.key, value: f.value,
+        tags: Array.isArray(f.tags) ? f.tags : [],
+      }));
+      const embeddings = await embedMany(factTexts);
+
+      for (let i = 0; i < validFacts.length; i++) {
+        const fact = validFacts[i];
+        const embedding = embeddings[i];
+        const tags = Array.isArray(fact.tags)
+          ? fact.tags.map((t: any) => String(t).toLowerCase().trim().replace(/\s+/g, "-")).filter(Boolean).slice(0, 6)
+          : [];
+
         const { data: existing } = await supabase
           .from("user_memory")
-          .select("id, confidence")
+          .select("id, confidence, tags")
           .eq("user_id", userId)
           .eq("category", fact.category)
           .eq("key", fact.key)
-          .single();
+          .maybeSingle();
+
+        const patch: Record<string, unknown> = {
+          value: fact.value,
+          last_reinforced_at: new Date().toISOString(),
+        };
+        // Merge tags rather than overwriting — reinforcement adds context, not replaces.
+        const mergedTags = Array.from(new Set([...(existing?.tags ?? []), ...tags]));
+        if (mergedTags.length) patch.tags = mergedTags;
+        if (embedding) patch.embedding = embedding;
 
         if (existing) {
-          // Update existing with higher confidence
-          await supabase
-            .from("user_memory")
-            .update({
-              value: fact.value,
-              confidence: Math.max(existing.confidence, fact.confidence || 0.8),
-              last_reinforced_at: new Date().toISOString(),
-            })
-            .eq("id", existing.id);
+          patch.confidence = Math.max(existing.confidence ?? 0, fact.confidence || 0.8);
+          await supabase.from("user_memory").update(patch).eq("id", existing.id);
         } else {
           await supabase.from("user_memory").insert({
             user_id: userId,
             category: fact.category,
             key: fact.key,
             value: fact.value,
+            tags: mergedTags,
             confidence: fact.confidence || 0.8,
             source: fact.source || "inferred",
+            embedding: embedding ?? null,
           });
         }
         results.memory_facts++;
       }
     }
+
 
     // Store conversation summary
     if (extracted.summary?.text) {

@@ -686,6 +686,7 @@ export type Database = {
           category: string
           confidence: number | null
           created_at: string | null
+          embedding: string | null
           id: string
           is_pinned: boolean
           is_sensitive: boolean
@@ -693,6 +694,7 @@ export type Database = {
           last_reinforced_at: string | null
           source: string | null
           source_message_id: string | null
+          tags: string[]
           updated_at: string | null
           user_id: string
           value: string
@@ -701,6 +703,7 @@ export type Database = {
           category: string
           confidence?: number | null
           created_at?: string | null
+          embedding?: string | null
           id?: string
           is_pinned?: boolean
           is_sensitive?: boolean
@@ -708,6 +711,7 @@ export type Database = {
           last_reinforced_at?: string | null
           source?: string | null
           source_message_id?: string | null
+          tags?: string[]
           updated_at?: string | null
           user_id: string
           value: string
@@ -716,6 +720,7 @@ export type Database = {
           category?: string
           confidence?: number | null
           created_at?: string | null
+          embedding?: string | null
           id?: string
           is_pinned?: boolean
           is_sensitive?: boolean
@@ -723,6 +728,7 @@ export type Database = {
           last_reinforced_at?: string | null
           source?: string | null
           source_message_id?: string | null
+          tags?: string[]
           updated_at?: string | null
           user_id?: string
           value?: string
@@ -805,6 +811,27 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      match_user_memory: {
+        Args: {
+          _include_sensitive?: boolean
+          _match_count?: number
+          _query_embedding: string
+          _user_id: string
+        }
+        Returns: {
+          category: string
+          confidence: number
+          id: string
+          is_pinned: boolean
+          is_sensitive: boolean
+          key: string
+          last_reinforced_at: string
+          similarity: number
+          source: string
+          tags: string[]
+          value: string
+        }[]
       }
     }
     Enums: {

@@ -41,12 +41,12 @@ Executed one phase per turn. You approve each phase before I move to the next. E
 - Sensitive-topic guardrail: when the last user message contains grief / crisis / mental-health markers, emoji use is suppressed regardless of ratio.
 - Response shaping baked into the prompt: short questions get short answers, no forced summaries, no bullets by default.
 
-## Phase 4 — Memory Intelligence (Relationship Layer)
-- **Memory Confidence & Trust Levels:** each memory gets `confidence` (0-1) and `source` (explicit / inferred / observed). Surface in Memory Dashboard.
-- **Memory Repair:** inline "that's not quite right" on any Aurora reference to a memory → opens edit sheet.
-- **Private Vault:** locked memories excluded from retrieval unless user unlocks per session.
-- **AI Receipts:** when Aurora references a memory, a small "why I remembered this" chip reveals the source memory.
-- **Memory Map (light):** Memory Dashboard gets a graph view of related memories (no heavy viz lib; SVG force layout).
+## Phase 4 — Memory Intelligence  *(retrieval index shipped)*
+- **Structured extraction:** memory-extract now emits `tags` per fact (lowercase, dashed) alongside category/key/value/confidence/source.
+- **Per-user retrieval index:** `user_memory.embedding vector(1536)` + HNSW cosine index; embeddings via `openai/text-embedding-3-small` through the AI Gateway.
+- **Live retrieval:** every chat turn embeds the latest user message and injects the top semantically-relevant memories into the system prompt (sensitive memories excluded).
+- **`memory-search` edge function** + `useMemorySystem.searchMemory()` for UI-driven semantic lookup.
+- Still open for later phases: Memory Repair UI, Private Vault unlock flow, AI Receipts chips, Memory Map graph view.
 
 ## Phase 5 — Companion Growth
 - Relationship Timeline (visible history of milestones, not scores).
