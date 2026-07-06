@@ -58,6 +58,7 @@ Return ONLY valid JSON matching this exact schema:
       "category": "goal|interest|relationship|project|trigger|motivator|pattern|skill|value|fact",
       "key": "short label",
       "value": "the actual insight",
+      "tags": ["short-tag", "another-tag"],
       "confidence": 0.0-1.0,
       "source": "explicit|inferred|observed"
     }
@@ -92,6 +93,7 @@ Rules:
 - Be conservative with confidence scores
 - Focus on durable, long-term relevant facts (not ephemeral details)
 - Max 8 memory_facts per call
+- Tags: 1-4 short lowercase tokens per fact (e.g. "career", "family", "health", "python", "anxiety"). No spaces — use dashes.
 - Keep summary.text concise and humanizing
 - Skip categories with no evidence`,
           },
