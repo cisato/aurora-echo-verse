@@ -5,6 +5,7 @@ import { getAuthHeaders } from '@/lib/edgeAuth';
 
 const MEMORY_EXTRACT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/memory-extract`;
 const EMOTION_ANALYZE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/emotion-analyze`;
+const MEMORY_SEARCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/memory-search`;
 
 export interface EmotionResult {
   emotion: string;
