@@ -324,6 +324,7 @@ serve(async (req) => {
 
     // Build cognitive context if userId is provided
     let cognitiveContext = "";
+    let retrievedMemoryBlock = "";
     if (userId) {
       try {
         const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -333,11 +334,49 @@ serve(async (req) => {
           const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
           const cognitiveState = await buildCognitiveState(userId, supabase, userName || "", companionMode);
           cognitiveContext = buildContextBlock(cognitiveState);
+
+          // Semantic retrieval: pull the top memories most relevant to what the user
+          // just said. This is the retrieval index — vector similarity over user_memory.
+          if (lastUserText) {
+            try {
+              const queryEmbedding = await embedOne(lastUserText);
+              if (queryEmbedding) {
+                const { data: matches, error: matchError } = await supabase.rpc("match_user_memory", {
+                  _user_id: userId,
+                  _query_embedding: queryEmbedding,
+                  _match_count: 6,
+                  _include_sensitive: false,
+                });
+                if (matchError) {
+                  console.error("match_user_memory failed:", matchError);
+                } else if (Array.isArray(matches) && matches.length > 0) {
+                  // Keep only reasonably-similar hits — filters out noise on unrelated turns.
+                  const relevant = matches.filter((m: any) => (m.similarity ?? 0) >= 0.35);
+                  if (relevant.length > 0) {
+                    const lines = relevant.map((m: any) => {
+                      const tags = Array.isArray(m.tags) && m.tags.length ? ` #${m.tags.slice(0, 3).join(" #")}` : "";
+                      return `- (${m.category}) ${m.key}: ${m.value}${tags}`;
+                    });
+                    retrievedMemoryBlock = `**Most relevant memories for what they just said:**\n${lines.join("\n")}`;
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("Semantic memory retrieval failed:", e);
+            }
+          }
         }
       } catch (e) {
         console.error("Failed to build cognitive context:", e);
       }
     }
+
+    if (retrievedMemoryBlock) {
+      cognitiveContext = cognitiveContext
+        ? `${cognitiveContext}\n\n${retrievedMemoryBlock}`
+        : retrievedMemoryBlock;
+    }
+
 
     const modeInstructions = getCompanionModeInstructions(companionMode || persona);
 
