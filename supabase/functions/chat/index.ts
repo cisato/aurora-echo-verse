@@ -280,6 +280,27 @@ serve(async (req) => {
     if (isAuthResponse(auth)) return auth;
     const { messages, persona = "assistant", userName, companionMode = "assistant" } = await req.json();
     const userId = auth.userId;
+
+    // --- Emoji intelligence: measure the user's emoji density from their own turns.
+    // Regex matches most emoji code points (BMP symbols + supplementary planes).
+    const EMOJI_RE = /\p{Extended_Pictographic}/gu;
+    const userTurns = (messages || []).filter((m: any) => m?.role === "user" && typeof m.content === "string");
+    const totalUserMessages = userTurns.length;
+    const messagesWithEmoji = userTurns.filter((m: any) => EMOJI_RE.test(m.content)).length;
+    const emojiRatio = totalUserMessages > 0 ? messagesWithEmoji / totalUserMessages : 0;
+    let emojiGuidance: string;
+    if (emojiRatio === 0) emojiGuidance = "The user does not use emoji. Do not use any.";
+    else if (emojiRatio < 0.25) emojiGuidance = "The user rarely uses emoji. Use at most one occasionally, only when it truly adds warmth.";
+    else if (emojiRatio < 0.6) emojiGuidance = "The user uses emoji sometimes. Mirror lightly — one or two per response max, only when natural.";
+    else emojiGuidance = "The user uses emoji often. Match their energy — a couple of well-placed emojis are welcome. Never overdo it.";
+
+    // Sensitive-topic detection → enforce restraint regardless of ratio.
+    const lastUserText: string = userTurns.length ? String(userTurns[userTurns.length - 1].content).toLowerCase() : "";
+    const sensitiveMarkers = ["suicid", "self-harm", "self harm", "kill myself", "abuse", "assault", "grief", "grieving", "died", "passed away", "funeral", "depress", "panic attack", "hopeless", "worthless", "trauma", "miscarriage", "divorce", "breakup", "layoff", "fired"];
+    const isSensitive = sensitiveMarkers.some((m) => lastUserText.includes(m));
+    if (isSensitive) {
+      emojiGuidance = "The user is discussing something emotionally heavy. Do NOT use emoji in this response. Presence and plain words matter more than decoration.";
+    }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
