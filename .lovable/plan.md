@@ -35,10 +35,11 @@ Executed one phase per turn. You approve each phase before I move to the next. E
 - Audit localStorage: move anything sensitive (voice settings are fine; nothing user-identifying should live there).
 - Add rate limits on `chat` and `transcribe`.
 
-## Phase 3 — Human Conversation Engine
-- Rewrite `chat` system prompt: contractions, variable rhythm, no repetitive openings, no "I looked that up" meta-talk, honest continuity ("Last time we were exploring…" not "I missed you").
-- Emoji intelligence: track user's emoji-per-message ratio in `user_settings`, mirror it. Sensitive topics → restraint enforced in prompt.
-- Response shaping: short answers stay short; no forced summaries.
+## Phase 3 — Human Conversation Engine  *(complete)*
+- Rewrote `chat` system prompt: contractions, variable rhythm, no "Great question", no meta-talk, honest continuity, presence over performance.
+- Emoji intelligence: server measures user emoji ratio across the conversation and instructs Aurora to mirror lightly, moderately, or heavily — or not at all.
+- Sensitive-topic guardrail: when the last user message contains grief / crisis / mental-health markers, emoji use is suppressed regardless of ratio.
+- Response shaping baked into the prompt: short questions get short answers, no forced summaries, no bullets by default.
 
 ## Phase 4 — Memory Intelligence (Relationship Layer)
 - **Memory Confidence & Trust Levels:** each memory gets `confidence` (0-1) and `source` (explicit / inferred / observed). Surface in Memory Dashboard.
