@@ -20,10 +20,17 @@ export interface MemoryFact {
   category: string;
   key: string;
   value: string;
+  tags?: string[];
   confidence: number;
   source: string;
+  is_pinned?: boolean;
+  is_sensitive?: boolean;
   last_reinforced_at: string;
   created_at: string;
+}
+
+export interface MemoryMatch extends MemoryFact {
+  similarity: number;
 }
 
 export interface ConversationSummary {
