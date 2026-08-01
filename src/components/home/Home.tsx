@@ -73,13 +73,12 @@ export function Home({ onNavigate }: HomeProps) {
     });
 
     await executeIntent(intent, {
-      converse: (prompt) => {
-        onNavigate("home");
-        window.dispatchEvent(new CustomEvent("aurora:prompt", { detail: { prompt } }));
-      },
+      converse: (prompt) => openConversation(prompt),
       navigate: (surface, prompt) => {
         onNavigate(surface);
-        window.dispatchEvent(new CustomEvent("aurora:prompt", { detail: { prompt, surface } }));
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("aurora:prompt", { detail: { prompt, surface } }));
+        }, 220);
       },
       confirm: (i) => new Promise<boolean>((resolve) => setPending({ intent: i, resolve })),
       onUnavailable: (i) =>
@@ -92,8 +91,24 @@ export function Home({ onNavigate }: HomeProps) {
     setPreview(null);
   };
 
+  if (conversing) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center gap-2 border-b border-border/50 px-4 py-2">
+          <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setConversing(false)}>
+            <ChevronLeft className="mr-1 h-4 w-4" /> Home
+          </Button>
+        </div>
+        <div className="min-h-0 flex-1">
+          <ChatWindow />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 md:py-12 space-y-8">
+
       <header className="space-y-2">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
