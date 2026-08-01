@@ -50,51 +50,13 @@ const App = () => (
                     <Index />
                   </ProtectedRoute>
                 } />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                <Route path="/chat" element={
-                  <ProtectedRoute>
-                    <Chat />
-                  </ProtectedRoute>
-                } />
-                <Route path="/weather" element={
-                  <ProtectedRoute>
-                    <Weather />
-                  </ProtectedRoute>
-                } />
-                <Route path="/search" element={
-                  <ProtectedRoute>
-                    <Search />
-                  </ProtectedRoute>
-                } />
-                <Route path="/code" element={
-                  <ProtectedRoute>
-                    <Code />
-                  </ProtectedRoute>
-                } />
-                <Route path="/web" element={
-                  <ProtectedRoute>
-                    <Web />
-                  </ProtectedRoute>
-                } />
-                <Route path="/multimodal" element={
-                  <ProtectedRoute>
-                    <Multimodal />
-                  </ProtectedRoute>
-                } />
-                <Route path="/personas" element={
-                  <ProtectedRoute>
-                    <Personas />
-                  </ProtectedRoute>
-                } />
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <Reports />
-                  </ProtectedRoute>
-                } />
+                {/* Legacy surfaces now live inside the five primary areas of /app */}
+                {["/settings", "/chat", "/weather", "/search", "/code", "/web",
+                  "/multimodal", "/personas", "/reports", "/workspace", "/memory",
+                  "/automations", "/dashboard"].map((path) => (
+                  <Route key={path} path={path} element={<Navigate to="/app" replace />} />
+                ))}
+
                 <Route path="/profile" element={
                   <ProtectedRoute>
                     <Profile />
