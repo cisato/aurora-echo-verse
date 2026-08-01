@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { Sparkles, ArrowUp, Mic, Battery, Wifi, WifiOff, ShieldCheck } from "lucide-react";
+import { Sparkles, ArrowUp, Mic, Battery, Wifi, WifiOff, ShieldCheck, ChevronLeft } from "lucide-react";
+import { ChatWindow } from "@/components/ChatWindow";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
