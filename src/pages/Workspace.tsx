@@ -13,17 +13,14 @@ export default function Workspace() {
 
   useEffect(() => {
     const onPrompt = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { prompt?: string; surface?: string };
-      if (detail?.surface !== "workspace") return;
-      setTab("create");
-      // Hand the prompt to the conversation surface inside Workspace.
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("aurora:prompt", { detail: { prompt: detail.prompt } }));
-      }, 150);
+      const detail = (e as CustomEvent).detail as { surface?: string };
+      // The embedded conversation handles the prompt itself; we only focus the tab.
+      if (detail?.surface === "workspace") setTab("create");
     };
     window.addEventListener("aurora:prompt", onPrompt as EventListener);
     return () => window.removeEventListener("aurora:prompt", onPrompt as EventListener);
   }, []);
+
 
   return (
     <div className="flex h-full flex-col">

@@ -3,25 +3,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
-import Settings from "./pages/Settings";
-import Chat from "./pages/Chat";
-import Weather from "./pages/Weather";
-import Search from "./pages/Search"; 
-import Code from "./pages/Code";
-import Web from "./pages/Web";
 import NotFound from "./pages/NotFound";
-import { Multimodal } from "./components/Multimodal";
-import Personas from "./pages/Personas";
-import Reports from "./pages/Reports";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
-import MemoryPage from "./pages/Memory";
 import ApiKeys from "./pages/ApiKeys";
 import ApiAnalytics from "./pages/ApiAnalytics";
 import Pricing from "./pages/Pricing";
@@ -31,6 +21,7 @@ import Demo from "./pages/Demo";
 import Privacy from "./pages/Privacy";
 import Security from "./pages/Security";
 import AdminMetrics from "./pages/AdminMetrics";
+
 
 const queryClient = new QueryClient();
 
