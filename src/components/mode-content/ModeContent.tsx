@@ -1,59 +1,43 @@
-
-import { ChatWindow } from "@/components/ChatWindow";
-import { Dashboard } from "@/components/Dashboard";
+import { Home } from "@/components/home/Home";
 import { MemoryDashboard } from "@/components/MemoryDashboard";
-import { Multimodal } from "@/components/Multimodal";
-import Personas from "@/pages/Personas";
+import Workspace from "@/pages/Workspace";
+import Automations from "@/pages/Automations";
 import Settings from "@/pages/Settings";
-import Reports from "@/pages/Reports";
-import ApiKeys from "@/pages/ApiKeys";
-import ApiAnalytics from "@/pages/ApiAnalytics";
+import { ChatWindow } from "@/components/ChatWindow";
 
 interface ModeContentProps {
   activeMode: string;
+  onModeChange: (mode: string) => void;
 }
 
-export function ModeContent({ activeMode }: ModeContentProps) {
-  if (activeMode === "chat") {
-    return <ChatWindow />;
-  }
-  
-  if (activeMode === "dashboard") {
-    return <Dashboard />;
-  }
-  
-  if (activeMode === "memory") {
+/**
+ * Five primary surfaces. Older modes are folded into their new home so
+ * existing links and saved preferences keep working.
+ */
+const LEGACY: Record<string, string> = {
+  dashboard: "home",
+  chat: "home",
+  multimodal: "workspace",
+  reports: "workspace",
+  personas: "settings",
+  "api-keys": "settings",
+  "api-analytics": "settings",
+};
+
+export function ModeContent({ activeMode, onModeChange }: ModeContentProps) {
+  const mode = LEGACY[activeMode] ?? activeMode;
+
+  if (mode === "workspace") return <Workspace />;
+  if (mode === "memory") {
     return (
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
         <MemoryDashboard />
       </div>
     );
   }
-  
-  if (activeMode === "multimodal") {
-    return <Multimodal />;
-  }
-  
-  if (activeMode === "personas") {
-    return <Personas />;
-  }
-  
-  if (activeMode === "reports") {
-    return <Reports />;
-  }
-  
-  if (activeMode === "api-keys") {
-    return <ApiKeys />;
-  }
-  
-  if (activeMode === "api-analytics") {
-    return <ApiAnalytics />;
-  }
-  
-  if (activeMode === "settings") {
-    return <Settings />;
-  }
-  
-  // Default fallback
-  return <Dashboard />;
+  if (mode === "automations") return <Automations />;
+  if (mode === "settings") return <Settings />;
+  if (mode === "conversation") return <ChatWindow />;
+
+  return <Home onNavigate={onModeChange} />;
 }
