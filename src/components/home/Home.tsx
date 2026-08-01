@@ -31,11 +31,21 @@ export function Home({ onNavigate }: HomeProps) {
   const { profile } = useProfile();
   const device = useDeviceContext();
   const [input, setInput] = useState("");
+  const [conversing, setConversing] = useState(false);
   const [preview, setPreview] = useState<ResolvedIntent | null>(null);
   const [pending, setPending] = useState<{
     intent: ResolvedIntent;
     resolve: (ok: boolean) => void;
   } | null>(null);
+
+  const openConversation = (prompt?: string, record = false) => {
+    setConversing(true);
+    setTimeout(() => {
+      if (prompt) window.dispatchEvent(new CustomEvent("aurora:prompt", { detail: { prompt } }));
+      if (record) window.dispatchEvent(new CustomEvent("aurora:record"));
+    }, 220);
+  };
+
 
   const greeting = useMemo(() => {
     const map = {
