@@ -156,10 +156,8 @@ export function Home({ onNavigate }: HomeProps) {
               size="icon"
               aria-label="Talk to Aurora"
               className="rounded-full"
-              onClick={() => {
-                onNavigate("home");
-                window.dispatchEvent(new CustomEvent("aurora:record"));
-              }}
+              onClick={() => openConversation(undefined, true)}
+
             >
               <Mic className="h-4 w-4" />
             </Button>
