@@ -125,7 +125,7 @@ export function Sidebar({ onModeChange, activeMode }: SidebarProps) {
 
       {/* Quick icon rail (only the top 4 frequent items) */}
       <div className="flex-1 flex flex-col items-center gap-1 mt-2">
-        {NAV_ITEMS.slice(0, 4).map((item) => {
+        {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeMode === item.mode;
           return (
