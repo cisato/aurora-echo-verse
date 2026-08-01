@@ -128,6 +128,23 @@ export function ChatWindow() {
     initialGreetingRef.current = false;
   };
 
+  // Requests routed here by the Intent Engine (Home omnibox, voice, skills).
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      const prompt = (e as CustomEvent).detail?.prompt;
+      if (typeof prompt === "string" && prompt.trim()) handleSendMessage(prompt);
+    };
+    const onRecord = () => toggleRecording();
+    window.addEventListener("aurora:prompt", onPrompt as EventListener);
+    window.addEventListener("aurora:record", onRecord);
+    return () => {
+      window.removeEventListener("aurora:prompt", onPrompt as EventListener);
+      window.removeEventListener("aurora:record", onRecord);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayMessages, currentConversation, settings.companion_mode]);
+
+
   const handleSendMessage = async (overrideText?: string) => {
     const messageText = overrideText || inputText;
     if (!messageText.trim()) return;
