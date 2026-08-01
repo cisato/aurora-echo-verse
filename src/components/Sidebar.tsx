@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  MessageCircle, LayoutDashboard, Brain, Settings2, Image, User,
-  FileText, Key, BarChart3, CreditCard, Menu, X,
+  Home, LayoutGrid, Brain, Settings2, Zap, CreditCard, Menu, X,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ThemeToggle } from "./ThemeToggle";
@@ -16,17 +15,15 @@ interface SidebarProps {
   activeMode: string;
 }
 
+/** Aurora has exactly five primary surfaces. Everything else is a skill. */
 export const NAV_ITEMS = [
-  { name: "Dashboard", icon: LayoutDashboard, mode: "dashboard" },
-  { name: "Chat", icon: MessageCircle, mode: "chat" },
+  { name: "Home", icon: Home, mode: "home" },
+  { name: "Workspace", icon: LayoutGrid, mode: "workspace" },
   { name: "Memory", icon: Brain, mode: "memory" },
-  { name: "Multimodal", icon: Image, mode: "multimodal" },
-  { name: "Personas", icon: User, mode: "personas" },
-  { name: "Reports", icon: FileText, mode: "reports" },
-  { name: "API Keys", icon: Key, mode: "api-keys" },
-  { name: "Analytics", icon: BarChart3, mode: "api-analytics" },
+  { name: "Automations", icon: Zap, mode: "automations" },
   { name: "Settings", icon: Settings2, mode: "settings" },
 ];
+
 
 export function Sidebar({ onModeChange, activeMode }: SidebarProps) {
   const [open, setOpen] = useState(false);
@@ -128,7 +125,7 @@ export function Sidebar({ onModeChange, activeMode }: SidebarProps) {
 
       {/* Quick icon rail (only the top 4 frequent items) */}
       <div className="flex-1 flex flex-col items-center gap-1 mt-2">
-        {NAV_ITEMS.slice(0, 4).map((item) => {
+        {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeMode === item.mode;
           return (

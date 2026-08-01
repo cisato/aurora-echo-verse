@@ -3,25 +3,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
-import Settings from "./pages/Settings";
-import Chat from "./pages/Chat";
-import Weather from "./pages/Weather";
-import Search from "./pages/Search"; 
-import Code from "./pages/Code";
-import Web from "./pages/Web";
 import NotFound from "./pages/NotFound";
-import { Multimodal } from "./components/Multimodal";
-import Personas from "./pages/Personas";
-import Reports from "./pages/Reports";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
-import MemoryPage from "./pages/Memory";
 import ApiKeys from "./pages/ApiKeys";
 import ApiAnalytics from "./pages/ApiAnalytics";
 import Pricing from "./pages/Pricing";
@@ -31,6 +21,7 @@ import Demo from "./pages/Demo";
 import Privacy from "./pages/Privacy";
 import Security from "./pages/Security";
 import AdminMetrics from "./pages/AdminMetrics";
+
 
 const queryClient = new QueryClient();
 
@@ -59,51 +50,13 @@ const App = () => (
                     <Index />
                   </ProtectedRoute>
                 } />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                <Route path="/chat" element={
-                  <ProtectedRoute>
-                    <Chat />
-                  </ProtectedRoute>
-                } />
-                <Route path="/weather" element={
-                  <ProtectedRoute>
-                    <Weather />
-                  </ProtectedRoute>
-                } />
-                <Route path="/search" element={
-                  <ProtectedRoute>
-                    <Search />
-                  </ProtectedRoute>
-                } />
-                <Route path="/code" element={
-                  <ProtectedRoute>
-                    <Code />
-                  </ProtectedRoute>
-                } />
-                <Route path="/web" element={
-                  <ProtectedRoute>
-                    <Web />
-                  </ProtectedRoute>
-                } />
-                <Route path="/multimodal" element={
-                  <ProtectedRoute>
-                    <Multimodal />
-                  </ProtectedRoute>
-                } />
-                <Route path="/personas" element={
-                  <ProtectedRoute>
-                    <Personas />
-                  </ProtectedRoute>
-                } />
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <Reports />
-                  </ProtectedRoute>
-                } />
+                {/* Legacy surfaces now live inside the five primary areas of /app */}
+                {["/settings", "/chat", "/weather", "/search", "/code", "/web",
+                  "/multimodal", "/personas", "/reports", "/workspace", "/memory",
+                  "/automations", "/dashboard"].map((path) => (
+                  <Route key={path} path={path} element={<Navigate to="/app" replace />} />
+                ))}
+
                 <Route path="/profile" element={
                   <ProtectedRoute>
                     <Profile />
