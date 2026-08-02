@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
-import { Sparkles, ArrowUp, Mic, Battery, Wifi, WifiOff, ShieldCheck, ChevronLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowUp, Mic, Camera, Paperclip, ChevronLeft, ShieldCheck, Wifi, WifiOff, Battery } from "lucide-react";
 import { ChatWindow } from "@/components/ChatWindow";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -11,34 +10,60 @@ import {
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
 import { useDeviceContext } from "@/hooks/useDeviceContext";
+import { useConversations } from "@/hooks/useConversations";
 import { detectIntent, executeIntent } from "@/lib/intent/engine";
 import type { ResolvedIntent } from "@/lib/intent/types";
-import { DailyRitualCard } from "@/components/dashboard/DailyRitualCard";
-import { EnhancedMemoryCard } from "@/components/dashboard/EnhancedMemoryCard";
-import { RecentActivityCard } from "@/components/dashboard/RecentActivityCard";
+import { AuroraOrb } from "@/components/home/AuroraOrb";
+import { SmartCards } from "@/components/home/SmartCards";
+import { SuggestionCards } from "@/components/home/SuggestionCards";
+import { ActivityTimeline } from "@/components/home/ActivityTimeline";
 import { cn } from "@/lib/utils";
 
 interface HomeProps {
   onNavigate: (surface: string) => void;
 }
 
-const SUGGESTIONS = [
-  "Draft a follow-up email to my client",
-  "Remember that I prefer mornings for deep work",
-  "Summarise what I worked on this week",
-  "Every weekday at 7am, give me a briefing",
-];
+const GREETINGS = {
+  morning: "Good morning",
+  afternoon: "Good afternoon",
+  evening: "Good evening",
+  night: "Still up",
+} as const;
+
+const SUBLINES = {
+  morning: "The day is still yours to shape.",
+  afternoon: "Let's keep the momentum going.",
+  evening: "A good moment to close a few loops.",
+  night: "I'll keep things quiet and simple.",
+} as const;
 
 export function Home({ onNavigate }: HomeProps) {
   const { profile } = useProfile();
   const device = useDeviceContext();
+  const { conversations } = useConversations();
   const [input, setInput] = useState("");
   const [conversing, setConversing] = useState(false);
   const [preview, setPreview] = useState<ResolvedIntent | null>(null);
+  const [now, setNow] = useState(() => new Date());
   const [pending, setPending] = useState<{
     intent: ResolvedIntent;
     resolve: (ok: boolean) => void;
   } | null>(null);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const memoryCount = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("aurora_memories");
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.length : 0;
+    } catch {
+      return 0;
+    }
+  }, []);
 
   const openConversation = (prompt?: string, record = false) => {
     setConversing(true);
@@ -47,17 +72,6 @@ export function Home({ onNavigate }: HomeProps) {
       if (record) window.dispatchEvent(new CustomEvent("aurora:record"));
     }, 220);
   };
-
-
-  const greeting = useMemo(() => {
-    const map = {
-      morning: "Good morning",
-      afternoon: "Good afternoon",
-      evening: "Good evening",
-      night: "Still up",
-    } as const;
-    return map[device.timeOfDay];
-  }, [device.timeOfDay]);
 
   const handleChange = (value: string) => {
     setInput(value);
@@ -96,7 +110,7 @@ export function Home({ onNavigate }: HomeProps) {
   if (conversing) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center gap-2 border-b border-border/50 px-4 py-2">
+        <div className="flex items-center gap-2 px-3 py-2">
           <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setConversing(false)}>
             <ChevronLeft className="mr-1 h-4 w-4" /> Home
           </Button>
@@ -108,123 +122,152 @@ export function Home({ onNavigate }: HomeProps) {
     );
   }
 
+  const greeting = GREETINGS[device.timeOfDay];
+
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8 md:py-12 space-y-8">
+    <div className="relative">
+      {/* ambient light — shifts with the time of day */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 transition-opacity duration-1000"
+        style={{
+          background:
+            device.timeOfDay === "night"
+              ? "radial-gradient(90% 60% at 50% -10%, hsl(var(--forest) / 0.16), transparent 70%)"
+              : device.timeOfDay === "evening"
+              ? "radial-gradient(90% 60% at 50% -10%, hsl(var(--gold) / 0.16), transparent 70%)"
+              : "radial-gradient(90% 60% at 50% -10%, hsl(var(--sage) / 0.22), transparent 70%)",
+        }}
+      />
 
-      <header className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-primary">Aurora</span>
-        </div>
-        <h1 className="font-display text-3xl sm:text-4xl tracking-tight">
-          {greeting}{profile?.display_name ? `, ${profile.display_name}` : ""}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Tell me what you need. I'll figure out the rest.
-        </p>
-      </header>
-
-      {/* Omnibox — every request enters through here */}
-      <section className="space-y-3">
-        <div className="rounded-3xl border border-border/60 bg-card/70 backdrop-blur-xl shadow-sm focus-within:border-primary/50 transition-colors">
-          <textarea
-            value={input}
-            onChange={(e) => handleChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            rows={2}
-            placeholder="Ask, plan, remember, or automate…"
-            className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] outline-none placeholder:text-muted-foreground/70"
-          />
-          <div className="flex items-center justify-between gap-2 px-3 pb-3">
-            <div className="min-w-0 flex-1">
-              {preview && (
-                <div className="flex items-center gap-2 px-2 text-[11px] text-muted-foreground truncate">
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
-                    {preview.skill.name}
-                  </span>
-                  <span className="truncate">{preview.plan.map((s) => s.label).join(" → ")}</span>
-                </div>
-              )}
+      <div className="mx-auto w-full max-w-3xl px-5 pb-40 pt-10 md:pt-16 space-y-10">
+        {/* ── Greeting ─────────────────────────────── */}
+        <header className="animate-rise-in space-y-5">
+          <div className="flex items-start gap-4">
+            <AuroraOrb size={52} />
+            <div className="min-w-0 flex-1 pt-0.5">
+              <p className="text-[14px] text-muted-foreground">
+                {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+                {" · "}
+                {now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+              </p>
+              <h1 className="mt-1 font-display text-[34px] leading-[1.1] tracking-tight sm:text-[40px]">
+                {greeting}
+                {profile?.display_name ? `, ${profile.display_name}` : ""}
+              </h1>
+              <p className="mt-2 text-[16px] text-muted-foreground">{SUBLINES[device.timeOfDay]}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Talk to Aurora"
-              className="rounded-full"
-              onClick={() => openConversation(undefined, true)}
-
-            >
-              <Mic className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              aria-label="Send"
-              className="rounded-full"
-              disabled={!input.trim()}
-              onClick={() => submit()}
-            >
-              <ArrowUp className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
 
-        <div className="flex flex-wrap gap-2">
-          {SUGGESTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => submit(s)}
-              className="rounded-full border border-border/60 bg-card/50 px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </section>
+          <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full surface-glass px-3 py-1.5">
+              {device.network?.online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
+              {device.network?.online ? device.network?.type ?? "Online" : "Offline"}
+            </span>
+            {device.battery && (
+              <span className="inline-flex items-center gap-1.5 rounded-full surface-glass px-3 py-1.5">
+                <Battery className={cn("h-3.5 w-3.5", device.battery.level < 0.2 && "text-destructive")} />
+                {Math.round(device.battery.level * 100)}%{device.battery.charging ? " · charging" : ""}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5 rounded-full surface-glass px-3 py-1.5">
+              <ShieldCheck className="h-3.5 w-3.5" /> Nothing runs without your say-so
+            </span>
+          </div>
+        </header>
 
-      {/* Ambient awareness */}
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1">
-          {device.network?.online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-          {device.network?.online ? device.network?.type ?? "Online" : "Offline"}
-        </span>
-        {device.battery && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1">
-            <Battery className={cn("h-3 w-3", device.battery.level < 0.2 && "text-destructive")} />
-            {Math.round(device.battery.level * 100)}%{device.battery.charging ? " · charging" : ""}
-          </span>
-        )}
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1">
-          <ShieldCheck className="h-3 w-3" /> Nothing runs without your say-so
-        </span>
+        {/* ── What deserves attention right now ────── */}
+        <SmartCards
+          device={device}
+          conversations={conversations}
+          memoryCount={memoryCount}
+          onResume={() => openConversation()}
+          onNavigate={onNavigate}
+        />
+
+        {/* ── Suggestions ──────────────────────────── */}
+        <section className="space-y-4">
+          <h2 className="font-display text-2xl tracking-tight">Start something</h2>
+          <SuggestionCards timeOfDay={device.timeOfDay} onSelect={(p) => submit(p)} />
+        </section>
+
+        {/* ── Timeline ─────────────────────────────── */}
+        <ActivityTimeline conversations={conversations} onSelect={() => openConversation()} />
       </div>
 
-      {/* Daily briefing */}
-      <section className="space-y-4">
-        <DailyRitualCard />
-        <div className="grid gap-4 md:grid-cols-2">
-          <RecentActivityCard />
-          <EnhancedMemoryCard />
+      {/* ── Floating composer ──────────────────────── */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 safe-pb">
+        <div className="mx-auto w-full max-w-3xl px-4 pb-4">
+          {preview && (
+            <div className="pointer-events-none mb-2 flex justify-center">
+              <span className="animate-rise-in inline-flex max-w-full items-center gap-2 truncate rounded-full surface-glass px-3 py-1.5 text-[13px] shadow-lift">
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                  {preview.skill.name}
+                </span>
+                <span className="truncate text-muted-foreground">
+                  {preview.plan.map((s) => s.label).join(" → ")}
+                </span>
+              </span>
+            </div>
+          )}
+          <div className="pointer-events-auto rounded-[1.75rem] surface-glass shadow-lift transition-shadow duration-300 focus-within:shadow-glow">
+            <textarea
+              value={input}
+              onChange={(e) => handleChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+              rows={1}
+              placeholder="Ask, plan, remember, or automate…"
+              className="w-full resize-none bg-transparent px-5 pt-4 pb-1 text-[16px] leading-relaxed outline-none placeholder:text-muted-foreground/70"
+            />
+            <div className="flex items-center gap-1 px-3 pb-3">
+              <Button
+                variant="ghost" size="icon" aria-label="Attach a file"
+                className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                onClick={() => onNavigate("workspace")}
+              >
+                <Paperclip className="h-[18px] w-[18px]" />
+              </Button>
+              <Button
+                variant="ghost" size="icon" aria-label="Use the camera"
+                className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                onClick={() => onNavigate("workspace")}
+              >
+                <Camera className="h-[18px] w-[18px]" />
+              </Button>
+              <div className="flex-1" />
+              <Button
+                variant="ghost" size="icon" aria-label="Talk to Aurora"
+                className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
+                onClick={() => openConversation(undefined, true)}
+              >
+                <Mic className="h-[18px] w-[18px]" />
+              </Button>
+              <Button
+                size="icon" aria-label="Send"
+                className="h-10 w-10 rounded-full transition-transform duration-200 active:scale-95 disabled:opacity-40"
+                disabled={!input.trim()}
+                onClick={() => submit()}
+              >
+                <ArrowUp className="h-[18px] w-[18px]" />
+              </Button>
+            </div>
+          </div>
         </div>
-      </section>
-
-      <Card className="rounded-2xl border-border/60 bg-card/50 p-4 text-xs text-muted-foreground">
-        Aurora routes every request through intent detection, your memory, and a
-        visible plan before acting. You can always see what it intends to do.
-      </Card>
+      </div>
 
       <AlertDialog open={!!pending} onOpenChange={(open) => {
         if (!open && pending) { pending.resolve(false); setPending(null); }
       }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-[1.5rem]">
           <AlertDialogHeader>
-            <AlertDialogTitle>{pending?.intent.skill.name}</AlertDialogTitle>
+            <AlertDialogTitle className="font-display text-2xl">{pending?.intent.skill.name}</AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-2">
+              <div className="space-y-2 text-[15px]">
                 <p>Here's what I'd do:</p>
                 <ol className="space-y-1 pl-4 list-decimal">
                   {pending?.intent.plan.map((step) => (
