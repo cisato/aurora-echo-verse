@@ -53,7 +53,7 @@ const App = () => (
                 {/* Legacy surfaces now live inside the five primary areas of /app */}
                 {["/settings", "/chat", "/weather", "/search", "/code", "/web",
                   "/multimodal", "/personas", "/reports", "/workspace", "/memory",
-                  "/automations", "/dashboard"].map((path) => (
+                  "/automations", "/dashboard", "/index", "/home"].map((path) => (
                   <Route key={path} path={path} element={<Navigate to="/app" replace />} />
                 ))}
 
