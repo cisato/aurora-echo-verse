@@ -246,6 +246,14 @@
 }
 .animate-orb-orbit { animation: orb-orbit 14s linear infinite; }
 
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-rise-in, .animate-orb-breathe, .animate-orb-listen,
   .animate-orb-think, .animate-orb-orbit, .animate-breathe {

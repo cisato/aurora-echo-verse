@@ -104,6 +104,10 @@ const Settings = () => {
     if (profile?.display_name) setDisplayName(profile.display_name);
   }, [profile?.display_name]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("reduce-motion", reducedMotion);
+  }, [reducedMotion]);
+
   const setTheme = (dark: boolean) => {
     setIsDark(dark);
     document.documentElement.classList.toggle("dark", dark);
