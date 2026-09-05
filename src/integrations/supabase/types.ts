@@ -132,36 +132,50 @@ export type Database = {
       }
       bot_channel_links: {
         Row: {
+          conversation_id: string | null
           created_at: string
           display_name: string | null
           external_id: string
           id: string
+          last_message_at: string | null
           metadata: Json
           platform: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          conversation_id?: string | null
           created_at?: string
           display_name?: string | null
           external_id: string
           id?: string
+          last_message_at?: string | null
           metadata?: Json
           platform: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          conversation_id?: string | null
           created_at?: string
           display_name?: string | null
           external_id?: string
           id?: string
+          last_message_at?: string | null
           metadata?: Json
           platform?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bot_channel_links_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bot_link_codes: {
         Row: {
@@ -681,6 +695,21 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_updates: {
+        Row: {
+          created_at: string
+          update_id: number
+        }
+        Insert: {
+          created_at?: string
+          update_id: number
+        }
+        Update: {
+          created_at?: string
+          update_id?: number
+        }
+        Relationships: []
+      }
       user_memory: {
         Row: {
           category: string
@@ -765,6 +794,8 @@ export type Database = {
           memory_depth: string | null
           preferred_model: string | null
           proactive_enabled: boolean | null
+          telegram_enabled: boolean
+          telegram_proactive: boolean
           updated_at: string
           user_id: string
           voice_enabled: boolean | null
@@ -778,6 +809,8 @@ export type Database = {
           memory_depth?: string | null
           preferred_model?: string | null
           proactive_enabled?: boolean | null
+          telegram_enabled?: boolean
+          telegram_proactive?: boolean
           updated_at?: string
           user_id: string
           voice_enabled?: boolean | null
@@ -791,6 +824,8 @@ export type Database = {
           memory_depth?: string | null
           preferred_model?: string | null
           proactive_enabled?: boolean | null
+          telegram_enabled?: boolean
+          telegram_proactive?: boolean
           updated_at?: string
           user_id?: string
           voice_enabled?: boolean | null
