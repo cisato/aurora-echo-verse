@@ -477,13 +477,11 @@ Deno.serve(async (req) => {
     await saveMessage(supabase, link, conversationId, "user", userText);
     await saveMessage(supabase, link, conversationId, "assistant", answer);
 
-    let spoken = false;
+    await sendMessage(chatId, answer);
     if (cameFromVoice && link.metadata?.voice_replies !== false) {
       const audio = await speak(answer);
-      if (audio) spoken = await sendVoiceReply(chatId, audio);
+      if (audio) await sendVoiceReply(chatId, audio);
     }
-    if (!spoken) await sendMessage(chatId, answer);
-    else await sendMessage(chatId, answer);
 
     return new Response(JSON.stringify({ ok: true }));
   } catch (e) {
