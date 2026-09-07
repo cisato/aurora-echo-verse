@@ -868,6 +868,10 @@ export type Database = {
           value: string
         }[]
       }
+      merge_user_data: {
+        Args: { _from: string; _to: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "super_admin"
