@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { Panel, SurfaceHeader, AmbientBackdrop } from "@/components/aurora/Surface";
+import { TelegramConnect } from "@/components/settings/TelegramConnect";
+
 import { cn } from "@/lib/utils";
 
 function Group({
