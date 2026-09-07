@@ -268,6 +268,8 @@ const Settings = () => {
         <Row label="Email" hint={user?.email ?? "Not connected"}>
           <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[12px] text-primary">Active</span>
         </Row>
+        <TelegramConnect />
+
         <Row label="Google" hint="Used for one-tap sign-in">
           <span className="text-[13px] text-muted-foreground">
             {user?.app_metadata?.provider === "google" ? "Connected" : "Available at sign-in"}
