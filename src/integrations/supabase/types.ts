@@ -872,6 +872,7 @@ export type Database = {
         Args: { _from: string; _to: string }
         Returns: undefined
       }
+      user_id_by_email: { Args: { _email: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "super_admin"
