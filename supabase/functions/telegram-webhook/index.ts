@@ -40,6 +40,7 @@ const HELP = [
   "Commands:",
   "/mode — see or change how I show up (e.g. /mode casual)",
   "/remember <something> — save it to your memory",
+  "/forget <words> — delete every stored entry that mentions them",
   "/memory — what I currently remember about you",
   "/voice on|off — whether I reply with audio to voice notes",
   "/quiet on|off — my check-ins and daily rituals here",
