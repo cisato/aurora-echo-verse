@@ -7,9 +7,10 @@ import {
   sendMessage, sendChatAction, downloadFile, sendVoiceReply,
 } from "../_shared/telegram.ts";
 import {
-  buildCognitiveState, buildContextBlock, buildSystemPrompt,
+  buildCognitiveState, buildContextBlock, buildSystemPrompt, buildCapabilityNotes,
   emojiGuidanceFor, retrieveRelevantMemories, temperatureFor,
 } from "../_shared/brain.ts";
+import { embedOne } from "../_shared/embed.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
