@@ -289,31 +289,71 @@ async function handleCommand(supabase: Any, link: Any, chatId: number, text: str
         await sendMessage(chatId, "Tell me what to hold onto: /remember I take my coffee black");
         return true;
       }
+      // 'fact' is one of the categories the memory store accepts — anything
+      // else is rejected outright, which is what used to make saves fail.
+      const embedding = await embedOne(arg).catch(() => null);
       const { error } = await supabase.from("user_memory").insert({
         user_id: link.user_id,
-        category: "personal",
+        category: "fact",
         key: arg.slice(0, 60),
         value: arg,
-        source: "telegram",
+        source: "explicit",
         confidence: 1,
+        embedding,
       });
-      await sendMessage(chatId, error ? "That didn't save — try again?" : "Got it. I'll remember that.");
+      if (error) {
+        console.error("/remember insert failed:", error);
+        await sendMessage(chatId, `I could not save that, so I am not going to pretend I did. The store rejected it: ${error.message}`);
+        return true;
+      }
+      await sendMessage(chatId, "Saved. I checked — it's in your memory now.");
+      return true;
+    }
+
+    case "/forget": {
+      if (!arg) {
+        await sendMessage(chatId, "Tell me what to drop: /forget coffee\n\nI'll delete every stored entry that mentions it, and tell you exactly how many went.");
+        return true;
+      }
+      const pattern = `%${arg.replace(/[%_]/g, "")}%`;
+      const { data: deleted, error } = await supabase
+        .from("user_memory")
+        .delete()
+        .eq("user_id", link.user_id)
+        .or(`key.ilike.${pattern},value.ilike.${pattern}`)
+        .select("key");
+      if (error) {
+        console.error("/forget delete failed:", error);
+        await sendMessage(chatId, `I couldn't delete that, so nothing has been removed. The store said: ${error.message}`);
+        return true;
+      }
+      const count = deleted?.length ?? 0;
+      if (!count) {
+        await sendMessage(chatId, `Nothing stored matches "${arg}", so there was nothing to delete.`);
+        return true;
+      }
+      await sendMessage(chatId, `Deleted ${count} ${count === 1 ? "entry" : "entries"}:\n${deleted.map((d: Any) => `• ${d.key}`).join("\n")}\n\nNote: this clears stored memory. Past messages in this thread still exist — use /new for a clean thread.`);
       return true;
     }
 
     case "/memory": {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_memory")
         .select("category, key, value")
         .eq("user_id", link.user_id)
         .order("last_reinforced_at", { ascending: false })
         .limit(15);
+      if (error) {
+        console.error("/memory read failed:", error);
+        await sendMessage(chatId, `I couldn't read your memory just now, so I can't tell you what's in it. The store said: ${error.message}`);
+        return true;
+      }
       if (!data?.length) {
-        await sendMessage(chatId, "Nothing saved yet. Talk to me a while, or use /remember.");
+        await sendMessage(chatId, "Your memory store is empty — nothing is saved. If you just tried /remember and got no confirmation, that save did not go through.");
         return true;
       }
       const lines = data.map((m: Any) => `• ${m.key}: ${m.value}`).join("\n");
-      await sendMessage(chatId, `Here's what I'm holding:\n\n${lines}\n\nYou can manage all of it in the Memory screen in Aurora.`);
+      await sendMessage(chatId, `Here's what I'm holding:\n\n${lines}\n\nDelete any of it with /forget <words>, or manage it all in the Memory screen in Aurora.`);
       return true;
     }
 
