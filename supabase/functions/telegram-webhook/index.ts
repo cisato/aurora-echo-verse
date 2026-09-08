@@ -164,6 +164,7 @@ async function think(supabase: Any, link: Any, history: Any[], userText: string)
             cognitiveContext: context,
             companionMode: mode,
             emojiGuidance: guidance,
+            capabilityNotes: buildCapabilityNotes("telegram"),
             surfaceNotes: SURFACE_NOTES,
           }),
         },
