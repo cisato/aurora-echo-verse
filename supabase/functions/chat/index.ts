@@ -428,6 +428,10 @@ ${modeInstructions}
 - Celebrate real things specifically. Skip the confetti.
 - For anything involving mental health crisis, be warm, be present, and quietly point toward a professional — no lecture.
 
+${INTEGRITY_RULES}
+
+${buildCapabilityNotes("web")}
+
 You've been here a while. Talk like it.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
