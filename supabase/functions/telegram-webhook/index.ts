@@ -187,21 +187,51 @@ async function think(supabase: Any, link: Any, history: Any[], userText: string)
   return body?.choices?.[0]?.message?.content?.trim() || "I didn't quite catch that — say it again?";
 }
 
-async function transcribe(bytes: Uint8Array, filename: string): Promise<string> {
-  const form = new FormData();
-  form.append("model", "openai/gpt-4o-mini-transcribe");
-  form.append("file", new Blob([bytes], { type: "audio/ogg" }), filename);
-  const res = await fetch(`${GATEWAY}/audio/transcriptions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${await aiKey()}` },
-    body: form,
-  });
-  if (!res.ok) {
-    console.error("STT failed:", res.status, (await res.text()).slice(0, 300));
-    return "";
+const AUDIO_MIME: Record<string, string> = {
+  ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg",
+  mp3: "audio/mpeg", m4a: "audio/mp4", mp4: "audio/mp4",
+  wav: "audio/wav", webm: "audio/webm", flac: "audio/flac",
+};
+
+/**
+ * Speech-to-text. Distinguishes a transcription that came back genuinely empty
+ * (silence) from one that failed, so the reply never blames the speaker for a
+ * backend problem.
+ */
+async function transcribe(
+  bytes: Uint8Array,
+  filename: string,
+  declaredMime?: string,
+): Promise<{ text: string; failed: boolean; reason?: string }> {
+  const ext = (filename.split(".").pop() || "ogg").toLowerCase();
+  const mime = declaredMime || AUDIO_MIME[ext] || "audio/ogg";
+  try {
+    const form = new FormData();
+    form.append("model", "openai/gpt-4o-mini-transcribe");
+    form.append("file", new Blob([bytes], { type: mime }), filename);
+    const res = await fetch(`${GATEWAY}/audio/transcriptions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${await aiKey()}` },
+      body: form,
+    });
+    if (!res.ok) {
+      const detail = (await res.text()).slice(0, 400);
+      console.error(`STT failed [${res.status}] mime=${mime} file=${filename} bytes=${bytes.length}:`, detail);
+      const reason = res.status === 429
+        ? "I'm rate limited on transcription right now."
+        : res.status === 402
+        ? "Aurora's usage credits ran out, so transcription is off."
+        : `Transcription failed on my side (error ${res.status}).`;
+      return { text: "", failed: true, reason };
+    }
+    const body = await res.json().catch(() => ({}));
+    const text = body?.text?.trim?.() || "";
+    if (!text) console.warn(`STT returned empty text: mime=${mime} bytes=${bytes.length}`);
+    return { text, failed: false };
+  } catch (e) {
+    console.error("STT crashed:", e);
+    return { text: "", failed: true, reason: "Transcription crashed on my side." };
   }
-  const body = await res.json().catch(() => ({}));
-  return body?.text?.trim?.() || "";
 }
 
 async function speak(text: string): Promise<Uint8Array | null> {
