@@ -446,6 +446,39 @@ export type Database = {
         }
         Relationships: []
       }
+      proactive_checkins: {
+        Row: {
+          created_at: string
+          id: string
+          memory_id: string | null
+          message: string
+          platform: string
+          responded: boolean
+          topic_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          memory_id?: string | null
+          message: string
+          platform?: string
+          responded?: boolean
+          topic_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          memory_id?: string | null
+          message?: string
+          platform?: string
+          responded?: boolean
+          topic_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       proactive_insights: {
         Row: {
           created_at: string
@@ -794,6 +827,10 @@ export type Database = {
           memory_depth: string | null
           preferred_model: string | null
           proactive_enabled: boolean | null
+          telegram_checkin_max_per_day: number
+          telegram_checkin_quiet_end: number
+          telegram_checkin_quiet_start: number
+          telegram_checkins_enabled: boolean
           telegram_enabled: boolean
           telegram_proactive: boolean
           updated_at: string
@@ -809,6 +846,10 @@ export type Database = {
           memory_depth?: string | null
           preferred_model?: string | null
           proactive_enabled?: boolean | null
+          telegram_checkin_max_per_day?: number
+          telegram_checkin_quiet_end?: number
+          telegram_checkin_quiet_start?: number
+          telegram_checkins_enabled?: boolean
           telegram_enabled?: boolean
           telegram_proactive?: boolean
           updated_at?: string
@@ -824,6 +865,10 @@ export type Database = {
           memory_depth?: string | null
           preferred_model?: string | null
           proactive_enabled?: boolean | null
+          telegram_checkin_max_per_day?: number
+          telegram_checkin_quiet_end?: number
+          telegram_checkin_quiet_start?: number
+          telegram_checkins_enabled?: boolean
           telegram_enabled?: boolean
           telegram_proactive?: boolean
           updated_at?: string
