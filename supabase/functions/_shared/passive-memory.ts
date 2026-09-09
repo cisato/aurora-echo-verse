@@ -134,7 +134,6 @@ export async function extractAndStore(
         confidence: f.confidence ?? 0.7,
         source: "observed",
         embedding: embeddings[i] ?? null,
-        });
       });
       if (error) console.error("passive memory insert failed:", error.message);
       else written++;
