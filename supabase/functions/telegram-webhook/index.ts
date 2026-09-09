@@ -451,22 +451,92 @@ async function handleCommand(supabase: Any, link: Any, chatId: number, text: str
     }
 
     case "/voice": {
-      const on = arg.toLowerCase() !== "off";
+      const choice = arg.toLowerCase();
+      const mode = choice === "off" ? "off" : choice === "always" ? "always" : "on";
       await supabase.from("bot_channel_links")
-        .update({ metadata: { ...(link.metadata || {}), voice_replies: on } })
+        .update({ metadata: { ...(link.metadata || {}), voice_replies: mode !== "off", voice_mode: mode } })
         .eq("id", link.id);
-      await sendMessage(chatId, on ? "I'll answer voice notes out loud." : "Text replies only from now on.");
+      await sendMessage(chatId,
+        mode === "off" ? "Text replies only from now on."
+        : mode === "always" ? "I'll send a voice note with every reply, however you write to me."
+        : "I'll answer your voice notes with a voice note. Text still gets text.");
+      return true;
+    }
+
+    case "/checkins": {
+      const { data: s } = await supabase
+        .from("user_settings")
+        .select("telegram_checkins_enabled, telegram_checkin_max_per_day")
+        .eq("user_id", link.user_id).maybeSingle();
+      const choice = arg.toLowerCase().trim();
+
+      if (!choice) {
+        await sendMessage(chatId, s?.telegram_checkins_enabled
+          ? `Check-ins are on, up to ${s.telegram_checkin_max_per_day ?? 2} a day. I only reach out when there's something specific you told me to come back to — never just to say hi.\n\nTurn them off with /checkins off, or set a daily cap with e.g. /checkins 1.`
+          : "Check-ins are off — I only ever reply when you write to me.\n\nTurn them on with /checkins on and I'll follow up on things you've actually told me about, at most twice a day. Off again any time with /checkins off.");
+        return true;
+      }
+
+      if (/^\d+$/.test(choice)) {
+        const cap = Math.max(0, Math.min(5, parseInt(choice, 10)));
+        const { error } = await supabase.from("user_settings")
+          .update({ telegram_checkin_max_per_day: cap, telegram_checkins_enabled: cap > 0 })
+          .eq("user_id", link.user_id);
+        if (error) {
+          await sendMessage(chatId, `I couldn't change that setting, so nothing has changed. The store said: ${error.message}`);
+          return true;
+        }
+        await sendMessage(chatId, cap === 0 ? "Cap set to zero — that means check-ins are off." : `Done — at most ${cap} check-in${cap === 1 ? "" : "s"} a day.`);
+        return true;
+      }
+
+      const on = choice === "on";
+      if (!on && choice !== "off") {
+        await sendMessage(chatId, "Use /checkins on, /checkins off, or a daily cap like /checkins 1.");
+        return true;
+      }
+      const { error } = await supabase.from("user_settings")
+        .update({ telegram_checkins_enabled: on, telegram_proactive: on })
+        .eq("user_id", link.user_id);
+      if (error) {
+        await sendMessage(chatId, `I couldn't change that setting, so nothing has changed. The store said: ${error.message}`);
+        return true;
+      }
+      await sendMessage(chatId, on
+        ? "Check-ins are on. I'll only reach out about something specific you've told me — a deadline, a plan, something you said you'd do — and no more than twice a day. /checkins off stops it."
+        : "Check-ins are off. I won't message you first.");
       return true;
     }
 
     case "/quiet": {
       const quiet = arg.toLowerCase() !== "off";
       await supabase.from("user_settings")
-        .update({ telegram_proactive: !quiet })
+        .update({ telegram_proactive: !quiet, telegram_checkins_enabled: !quiet })
         .eq("user_id", link.user_id);
       await sendMessage(chatId, quiet ? "I'll keep my check-ins to myself here." : "I'll send my check-ins and rituals here again.");
       return true;
     }
+
+    case "/link": {
+      if (!arg) {
+        await sendMessage(chatId, "Send it as /link CODE. Get a code in Aurora under Settings → Connected Accounts.\n\nYou don't have to — this chat works fine on its own. Linking just puts everything in one account.");
+        return true;
+      }
+      if (link.metadata?.telegram_native === false) {
+        await sendMessage(chatId, "This chat is already connected to your Aurora account. Use /unlink first if you want to connect it to a different one.");
+        return true;
+      }
+      const result = await consumeCode(supabase, arg, chatId, link.display_name || "Telegram user", link);
+      if ("error" in result) {
+        await sendMessage(chatId, result.error!);
+        return true;
+      }
+      await sendMessage(chatId, result.merged
+        ? "Connected. Everything we've talked about here has moved into your Aurora account, and it's all in one place now."
+        : "Connected. This chat and your Aurora account are the same person now.");
+      return true;
+    }
+
 
     case "/new": {
       await supabase.from("bot_channel_links").update({ conversation_id: null }).eq("id", link.id);
