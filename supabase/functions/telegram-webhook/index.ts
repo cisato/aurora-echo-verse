@@ -33,8 +33,8 @@ function admin() {
 const HELP = [
   "Here's what I can do here:",
   "",
-  "• Just talk — I remember everything from your Aurora account.",
-  "• Send a voice note and I'll listen, and answer out loud.",
+  "• Just talk — I remember what matters from our conversations.",
+  "• Send a voice note and I'll listen, and answer with one.",
   "• Send a photo and I'll tell you what I see or read the text in it.",
   "",
   "Commands:",
@@ -42,10 +42,11 @@ const HELP = [
   "/remember <something> — save it to your memory",
   "/forget <words> — delete every stored entry that mentions them",
   "/memory — what I currently remember about you",
-  "/voice on|off — whether I reply with audio to voice notes",
-  "/quiet on|off — my check-ins and daily rituals here",
+  "/voice on|off|always — whether I reply with a voice note",
+  "/checkins on|off|<number> — whether I can message you first, and how often",
+  "/link <code> — connect this chat to your Aurora web account",
   "/new — start a fresh thread",
-  "/unlink — disconnect this chat from your account",
+  "/unlink — disconnect this chat",
 ].join("\n");
 
 /* ---------------------------------------------------------------- linking */
@@ -60,7 +61,53 @@ async function findLink(supabase: Any, chatId: number) {
   return data;
 }
 
-async function consumeCode(supabase: Any, code: string, chatId: number, displayName: string) {
+/**
+ * Telegram is a first-class front door: someone can start talking with no
+ * Aurora web account at all. We quietly provision one for this chat. They can
+ * merge it into a web account later with /link.
+ */
+async function provisionAccount(supabase: Any, chatId: number, displayName: string, username?: string) {
+  const email = `telegram-${chatId}@aurora.local`;
+  const password = crypto.randomUUID() + crypto.randomUUID();
+
+  let userId: string | null = null;
+  const { data: created, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { display_name: displayName, telegram_chat_id: chatId, telegram_username: username ?? null, source: "telegram" },
+  });
+  if (created?.user?.id) {
+    userId = created.user.id;
+  } else {
+    // Already provisioned earlier (e.g. the link row was deleted) — reuse it.
+    const { data: existingId } = await supabase.rpc("user_id_by_email", { _email: email });
+    userId = typeof existingId === "string" ? existingId : null;
+    if (!userId) {
+      console.error("Account provisioning failed:", error);
+      return null;
+    }
+  }
+
+  await supabase.from("profiles").upsert({ user_id: userId, display_name: displayName }, { onConflict: "user_id" });
+  await supabase.from("user_settings").upsert({ user_id: userId }, { onConflict: "user_id" });
+
+  const { data: link, error: linkError } = await supabase.from("bot_channel_links").upsert({
+    user_id: userId,
+    platform: "telegram",
+    external_id: String(chatId),
+    display_name: displayName,
+    metadata: { voice_replies: true, telegram_native: true },
+    last_message_at: new Date().toISOString(),
+  }, { onConflict: "platform,external_id" }).select("*").single();
+  if (linkError) {
+    console.error("Link create failed:", linkError);
+    return null;
+  }
+  return link;
+}
+
+async function consumeCode(supabase: Any, code: string, chatId: number, displayName: string, currentLink?: Any) {
   const { data: row } = await supabase
     .from("bot_link_codes")
     .select("*")
@@ -74,12 +121,25 @@ async function consumeCode(supabase: Any, code: string, chatId: number, displayN
     return { error: "That code expired. Grab a new one in Aurora under Settings → Connected Accounts." };
   }
 
+  let merged = 0;
+  // If this chat has been talking to a Telegram-only account, carry everything
+  // it built up over into the web account rather than stranding it.
+  if (currentLink?.user_id && currentLink.user_id !== row.user_id && currentLink.metadata?.telegram_native) {
+    const { error: mergeError } = await supabase.rpc("merge_user_data", { _from: currentLink.user_id, _to: row.user_id });
+    if (mergeError) {
+      console.error("merge_user_data failed:", mergeError);
+      return { error: `I couldn't move your Telegram history over, so I haven't connected anything yet. The store said: ${mergeError.message}` };
+    }
+    merged = 1;
+  }
+
   const { error } = await supabase.from("bot_channel_links").upsert({
     user_id: row.user_id,
     platform: "telegram",
     external_id: String(chatId),
     display_name: displayName,
-    metadata: { voice_replies: true },
+    conversation_id: null,
+    metadata: { ...(currentLink?.metadata || {}), voice_replies: currentLink?.metadata?.voice_replies ?? true, telegram_native: false },
     last_message_at: new Date().toISOString(),
   }, { onConflict: "platform,external_id" });
   if (error) {
@@ -88,7 +148,7 @@ async function consumeCode(supabase: Any, code: string, chatId: number, displayN
   }
 
   await supabase.from("bot_link_codes").update({ consumed_at: new Date().toISOString() }).eq("id", row.id);
-  return { userId: row.user_id };
+  return { userId: row.user_id, merged };
 }
 
 /* ------------------------------------------------------------ persistence */
