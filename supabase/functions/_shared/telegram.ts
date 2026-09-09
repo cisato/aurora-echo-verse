@@ -80,13 +80,23 @@ export async function downloadFile(fileId: string): Promise<{ bytes: Uint8Array;
   return { bytes: new Uint8Array(await res.arrayBuffer()), path };
 }
 
-export async function sendVoiceReply(chatId: number | string, audio: Uint8Array, mime = "audio/mpeg") {
+export async function sendVoiceReply(chatId: number | string, audio: Uint8Array, mime = "audio/ogg") {
+  // A real Telegram voice note needs OGG/Opus. Anything else has to go as an
+  // audio file instead — still audio, just not the round waveform bubble.
+  const isOpus = mime === "audio/ogg";
   const form = new FormData();
   form.append("chat_id", String(chatId));
-  form.append("audio", new Blob([audio], { type: mime }), "aurora.mp3");
-  form.append("title", "Aurora");
-  const res = await fetch(`${API}/bot${botToken()}/sendAudio`, { method: "POST", body: form });
-  if (!res.ok) console.error("Telegram sendAudio failed:", res.status, (await res.text()).slice(0, 300));
+  if (isOpus) {
+    form.append("voice", new Blob([audio], { type: mime }), "aurora.ogg");
+  } else {
+    form.append("audio", new Blob([audio], { type: mime }), "aurora.mp3");
+    form.append("title", "Aurora");
+  }
+  const res = await fetch(`${API}/bot${botToken()}/${isOpus ? "sendVoice" : "sendAudio"}`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) console.error("Telegram voice send failed:", res.status, (await res.text()).slice(0, 300));
   return res.ok;
 }
 
