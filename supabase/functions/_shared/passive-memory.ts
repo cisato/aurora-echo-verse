@@ -75,27 +75,44 @@ async function callModel(exchange: string): Promise<ExtractedFact[]> {
   }
 }
 
+export interface ExtractionResult {
+  /** Facts actually written to the store, phrased for the model to reference. */
+  stored: string[];
+  /** Plausible but unconfirmed readings. Never stored — Aurora may ask about one. */
+  uncertain: string[];
+}
+
+/** Below this, a reading is a guess and gets asked about instead of filed. */
+const CONFIDENCE_FLOOR = 0.6;
+
 /**
  * Read one exchange and quietly file what's durable about it.
- * Returns how many rows were actually written — never assume success.
+ * Everything below the confidence floor comes back as a question to ask, not a
+ * fact to claim. Returns exactly what was written — never assume success.
  */
 export async function extractAndStore(
   supabase: Any,
   userId: string,
   userText: string,
   assistantText: string,
-  conversationId?: string | null,
-): Promise<number> {
-  if (!userText || userText.trim().length < 3) return 0;
+  _conversationId?: string | null,
+): Promise<ExtractionResult> {
+  const result: ExtractionResult = { stored: [], uncertain: [] };
+  if (!userText || userText.trim().length < 3) return result;
 
   const exchange = `Person: ${userText}\nAssistant: ${assistantText}`.slice(0, 6000);
-  const facts = (await callModel(exchange))
+  const all = (await callModel(exchange))
     .filter((f) => f && CATEGORIES.includes(f.category) && f.key && f.value)
     .slice(0, 5);
-  if (!facts.length) return 0;
+  if (!all.length) return result;
+
+  const facts = all.filter((f) => (f.confidence ?? 0.7) >= CONFIDENCE_FLOOR);
+  for (const f of all) {
+    if ((f.confidence ?? 0.7) < CONFIDENCE_FLOOR) result.uncertain.push(`${f.key}: ${f.value}`);
+  }
+  if (!facts.length) return result;
 
   const embeddings = await embedMany(facts.map((f) => `${f.category}: ${f.key} — ${f.value}`));
-  let written = 0;
 
   for (let i = 0; i < facts.length; i++) {
     const f = facts[i];
@@ -123,7 +140,7 @@ export async function extractAndStore(
       patch.confidence = Math.max(existing.confidence ?? 0, f.confidence ?? 0.7);
       const { error } = await supabase.from("user_memory").update(patch).eq("id", existing.id);
       if (error) console.error("passive memory update failed:", error.message);
-      else written++;
+      else result.stored.push(`${f.key}: ${f.value}`);
     } else {
       const { error } = await supabase.from("user_memory").insert({
         user_id: userId,
@@ -136,9 +153,10 @@ export async function extractAndStore(
         embedding: embeddings[i] ?? null,
       });
       if (error) console.error("passive memory insert failed:", error.message);
-      else written++;
+      else result.stored.push(`${f.key}: ${f.value}`);
     }
   }
 
-  return written;
+  return result;
 }
+
