@@ -41,7 +41,13 @@ Rules:
 - Never invent or complete identifying or financial details (addresses, phone numbers, bank codes, IDs). If a detail wasn't stated in full, skip the fact.
 - "value" must be self-contained — readable months later with no chat history.
 - Set followup_at only when they named or clearly implied a date/deadline; otherwise null.
-- Max 5 facts. If nothing durable was said, return {"facts":[]}.`;
+
+Confidence is what separates a fact from a hunch, and it is used literally:
+- 0.8-1.0 — they said it outright. "My name is Neko" -> name is Neko. "I love rice" -> they love rice.
+- 0.6-0.8 — clearly implied and hard to read any other way.
+- Below 0.6 — a reasonable reading that they never actually said. "I ate rice yesterday, and the day before" might mean rice is their favourite food, but they didn't say that. Score it low. Low-confidence readings are NOT stored; they are turned into a gentle question the assistant may ask. Include at most one per exchange, and only when it's genuinely worth asking about.
+- Max 5 items. If nothing durable was said, return {"facts":[]}.`;
+
 
 async function callModel(exchange: string): Promise<ExtractedFact[]> {
   const key = Deno.env.get("LOVABLE_API_KEY");
