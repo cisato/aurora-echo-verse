@@ -587,42 +587,54 @@ Deno.serve(async (req) => {
   try {
     const displayName = [message.from?.first_name, message.from?.last_name].filter(Boolean).join(" ")
       || message.from?.username || "Telegram user";
-    const text: string = (message.text || "").trim();
+    let text: string = (message.text || "").trim();
+
+    // Telegram's own UI sends "/start", sometimes with a payload. Nothing else
+    // in Aurora is a command — if someone types one out of habit we just read
+    // it as ordinary words.
+    let startPayload = "";
+    if (/^\/start\b/i.test(text)) {
+      startPayload = text.replace(/^\/start\b/i, "").trim();
+      text = "";
+    } else if (text.startsWith("/")) {
+      text = text.slice(1).replace(/^(\w+)@\w+/, "$1").trim();
+    }
+
     let link = await findLink(supabase, chatId);
 
-    /* ---- not linked yet: only /start CODE gets you in ---- */
+    /* ---- first contact: provision an account and say hello ---- */
     if (!link) {
-      const code = text.startsWith("/start") ? text.replace("/start", "").trim() : text;
-      if (!code || code.startsWith("/")) {
-        await sendMessage(chatId,
-          "Hi — I'm Aurora.\n\nTo talk to me here I need to know which account you are. Open Aurora, go to Settings → Connected Accounts, tap Connect Telegram, and send me the code you get.");
+      // A start payload may be a link code from the web app.
+      if (startPayload) {
+        const result = await consumeCode(supabase, startPayload, chatId, displayName);
+        if (!("error" in result)) {
+          link = await findLink(supabase, chatId);
+          await sendMessage(chatId, `We're connected — everything you've told me in Aurora, I have here too.\n\nSo. What's going on?`);
+          return new Response(JSON.stringify({ ok: true }));
+        }
+      }
+      link = await provisionAccount(supabase, chatId, displayName, message.from?.username);
+      if (!link) {
+        await sendMessage(chatId, "I couldn't get set up just now. Try messaging me again in a moment.");
         return new Response(JSON.stringify({ ok: true }));
       }
-      const result = await consumeCode(supabase, code, chatId, displayName);
-      if ("error" in result) {
-        await sendMessage(chatId, result.error!);
+      await sendMessage(chatId, GREETING(displayName.split(" ")[0]));
+      if (!text && !message.voice && !message.audio && !message.photo) {
         return new Response(JSON.stringify({ ok: true }));
       }
-      link = await findLink(supabase, chatId);
-      await sendMessage(chatId, `We're connected. Everything you've told me in Aurora, I have here too.\n\n${HELP}`);
-      return new Response(JSON.stringify({ ok: true }));
     }
 
     /* ---- respect the master switch ---- */
     const { data: settings } = await supabase
       .from("user_settings").select("telegram_enabled").eq("user_id", link.user_id).maybeSingle();
     if (settings?.telegram_enabled === false) {
-      await sendMessage(chatId, "Telegram is switched off for your account. Turn it back on in Aurora under Settings → Connected Accounts.");
+      await sendMessage(chatId, "Telegram is switched off for your account. Turn it back on in Aurora under Settings → Connected Accounts and I'll be right here.");
       return new Response(JSON.stringify({ ok: true }));
     }
 
     await supabase.from("bot_channel_links")
       .update({ last_message_at: new Date().toISOString(), display_name: displayName })
       .eq("id", link.id);
-
-    if (text.startsWith("/") && await handleCommand(supabase, link, chatId, text)) {
-      return new Response(JSON.stringify({ ok: true }));
-    }
 
     await sendChatAction(chatId, "typing");
 
@@ -640,15 +652,25 @@ Deno.serve(async (req) => {
     if (voice?.file_id) {
       const file = await downloadFile(voice.file_id);
       if (!file) {
-        await sendMessage(chatId, "That voice note didn't come through. Send it again?");
+        await sendMessage(chatId, "That voice note didn't come through on my side. Send it again?");
         return new Response(JSON.stringify({ ok: true }));
       }
-      userText = await transcribe(file.bytes, file.path.split("/").pop() || "voice.ogg");
+      const heard = await transcribe(
+        file.bytes,
+        file.path.split("/").pop() || "voice.ogg",
+        voice.mime_type,
+      );
       cameFromVoice = true;
-      if (!userText) {
-        await sendMessage(chatId, "I couldn't make out any words in that one.");
+      if (heard.failed) {
+        // A backend failure is mine, not theirs — never blame the speaker.
+        await sendMessage(chatId, `${heard.reason} That's on my end, not your recording — try again in a moment, or send it as text.`);
         return new Response(JSON.stringify({ ok: true }));
       }
+      if (!heard.text) {
+        await sendMessage(chatId, "That one came through silent — I got the audio but no words in it. Want to try again?");
+        return new Response(JSON.stringify({ ok: true }));
+      }
+      userText = heard.text;
     }
 
     /* ---- photos and image documents ---- */
@@ -670,21 +692,58 @@ Deno.serve(async (req) => {
     }
 
     if (!userText) {
-      await sendMessage(chatId, "I can handle text, voice notes and photos here.");
+      await sendMessage(chatId, "I can read text, listen to voice notes and look at photos here.");
       return new Response(JSON.stringify({ ok: true }));
     }
 
+    /* ---- natural-language actions + passive memory, in parallel ---- */
+    const [detected, extraction] = await Promise.all([
+      detectAction(userText),
+      extractAndStore(supabase, link.user_id, userText, "", conversationId),
+    ]);
+
+    const notes: string[] = [];
+
+    if (detected.action !== "none") {
+      const outcome = await runAction(supabase, link, detected, {
+        consumeCode: async (code: string) => await consumeCode(supabase, code, chatId, displayName, link),
+      });
+      if (outcome) notes.push(outcome.note);
+    }
+
+    if (extraction.stored.length) {
+      notes.push(
+        `MEMORY: these were just filed automatically from what they said — ${extraction.stored.join("; ")}. ` +
+        `Don't announce the saving. Only mention it if they ask whether you caught it.`,
+      );
+    }
+    if (extraction.uncertain.length) {
+      notes.push(
+        `POSSIBLE, NOT STORED: "${extraction.uncertain[0]}". They didn't actually say this — it's your reading. ` +
+        `If it fits the flow, check it with them in one light question near the end of your reply (e.g. "is rice your favourite, or did I just catch you on a rice week?"). ` +
+        `If they confirm it next turn, it gets stored then. Never state it as something you know.`,
+      );
+    }
+
     const history = await loadHistory(supabase, conversationId);
-    const answer = await think(supabase, link, history, userText);
+    const answer = await think(supabase, link, history, userText, notes.join("\n\n"));
 
     await saveMessage(supabase, link, conversationId, "user", userText);
     await saveMessage(supabase, link, conversationId, "assistant", answer);
 
     await sendMessage(chatId, answer);
-    if (cameFromVoice && link.metadata?.voice_replies !== false) {
+
+    const voiceMode = link.metadata?.voice_mode ?? (link.metadata?.voice_replies === false ? "off" : "on");
+    if (voiceMode !== "off" && (cameFromVoice || voiceMode === "always")) {
       const audio = await speak(answer);
-      if (audio) await sendVoiceReply(chatId, audio);
+      if (audio) await sendVoiceReply(chatId, audio, "audio/mpeg");
     }
+
+    // File what Aurora said too, once the turn is over — cheap, off the path.
+    const bg = extractAndStore(supabase, link.user_id, userText, answer, conversationId)
+      .catch((e) => console.error("post-turn extraction failed:", e));
+    // deno-lint-ignore no-explicit-any
+    (globalThis as any).EdgeRuntime?.waitUntil?.(bg);
 
     return new Response(JSON.stringify({ ok: true }));
   } catch (e) {
@@ -693,3 +752,4 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true }));
   }
 });
+
