@@ -6,7 +6,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/auth.ts";
 import { sendMessage } from "../_shared/telegram.ts";
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
 const TOPIC_COOLDOWN_DAYS = 4;
 const QUIET_CATEGORIES = ["goal", "project", "fact", "relationship", "skill"];
 
@@ -36,18 +36,30 @@ async function draft(note: string, name?: string): Promise<string | null> {
   if (!key) return null;
   const res = await fetch(GATEWAY, {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${key}`, "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch", "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: `${name ? `Their name: ${name}\n` : ""}Stored note: ${note}` },
-      ],
-      temperature: 0.6,
+      model: "openai/gpt-6-astra",
+      stream: true,
+      store: false,
+      reasoning: { effort: "low" },
+      instructions: SYSTEM,
+      input: `${name ? `Their name: ${name}\n` : ""}Stored note: ${note}`,
     }),
   });
-  if (!res.ok) { console.error("draft failed", res.status); return null; }
-  const text = (await res.json())?.choices?.[0]?.message?.content?.trim() ?? "";
+  if (!res.ok || !res.body) { console.error("draft failed", res.status); return null; }
+  let text = "", buf = "";
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += value;
+    const lines = buf.split("\n"); buf = lines.pop() ?? "";
+    for (const l of lines) {
+      if (!l.startsWith("data:")) continue;
+      try { const e = JSON.parse(l.slice(5)); if (e.type === "response.output_text.delta") text += e.delta; } catch { /* skip */ }
+    }
+  }
+  text = text.trim();
   if (!text || /^SKIP\b/i.test(text)) return null;
   return text.slice(0, 600);
 }
