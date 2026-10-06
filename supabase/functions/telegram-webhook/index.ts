@@ -28,6 +28,10 @@ const SURFACE_NOTES = `**You are talking through Telegram**
 - Keep replies chat-sized: a few sentences. Long essays don't belong in a messaging thread.
 - Bullets are fine sparingly, using "•".`;
 
+const GREETING = (first?: string) =>
+  `Hey${first ? ` ${first}` : ""} — I'm Aurora. No commands here, just talk to me like you would a person. ` +
+  `Tell me what's going on and I'll remember what matters.`;
+
 function admin() {
   return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 }
