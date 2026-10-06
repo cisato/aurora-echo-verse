@@ -7,26 +7,18 @@ import { corsHeaders } from "../_shared/auth.ts";
 const API = "https://api.telegram.org";
 
 const NAME = "Aurora";
-const SHORT_DESCRIPTION = "Aurora — your AI companion that actually remembers you.";
+const SHORT_DESCRIPTION = "Aurora — an AI companion that remembers what you tell her. Just talk.";
 const DESCRIPTION = [
-  "Aurora is a personal AI companion with real memory.",
+  "Aurora is an AI companion with real memory. No commands — just talk to her like a person.",
   "",
-  "Talk to her here the same way you do in the app — she remembers your goals, projects and the way you like to be spoken to.",
-  "Send a voice note and she listens and answers out loud. Send a photo and she reads it.",
+  "Tell her about yourself and she'll quietly remember the things that matter. Ask what she knows, or ask her to forget something, in plain words.",
+  "Send a voice note and she can answer with one. Send a photo and she'll read it.",
   "",
-  "Link your account with the code from Aurora → Settings → Connected Accounts.",
+  "Works on its own straight away. Already use the Aurora app? Send her your link code to connect them — optional.",
 ].join("\n");
 
-const COMMANDS = [
-  { command: "help", description: "What Aurora can do here" },
-  { command: "mode", description: "See or change how Aurora shows up" },
-  { command: "remember", description: "Save something to your memory" },
-  { command: "memory", description: "What Aurora remembers about you" },
-  { command: "voice", description: "Turn spoken replies on or off" },
-  { command: "quiet", description: "Mute or unmute check-ins here" },
-  { command: "new", description: "Start a fresh thread" },
-  { command: "unlink", description: "Disconnect this chat" },
-];
+// Aurora is conversational — no slash command menu.
+const COMMANDS: { command: string; description: string }[] = [];
 
 async function call(token: string, method: string, payload: Record<string, unknown> = {}) {
   const res = await fetch(`${API}/bot${token}/${method}`, {
@@ -69,7 +61,7 @@ Deno.serve(async (req) => {
   results.name = await call(token, "setMyName", { name: NAME });
   results.short_description = await call(token, "setMyShortDescription", { short_description: SHORT_DESCRIPTION });
   results.description = await call(token, "setMyDescription", { description: DESCRIPTION });
-  results.commands = await call(token, "setMyCommands", { commands: COMMANDS });
+  results.commands = COMMANDS.length ? await call(token, "setMyCommands", { commands: COMMANDS }) : await call(token, "deleteMyCommands");
   results.info = await call(token, "getWebhookInfo");
 
   return new Response(JSON.stringify({ ok: true, webhookUrl, ...results }), {
