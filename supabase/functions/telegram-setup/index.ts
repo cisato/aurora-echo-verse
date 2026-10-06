@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
   results.name = await call(token, "setMyName", { name: NAME });
   results.short_description = await call(token, "setMyShortDescription", { short_description: SHORT_DESCRIPTION });
   results.description = await call(token, "setMyDescription", { description: DESCRIPTION });
-  results.commands = await call(token, "setMyCommands", { commands: COMMANDS });
+  results.commands = COMMANDS.length ? await call(token, "setMyCommands", { commands: COMMANDS }) : await call(token, "deleteMyCommands");
   results.info = await call(token, "getWebhookInfo");
 
   return new Response(JSON.stringify({ ok: true, webhookUrl, ...results }), {
