@@ -11,6 +11,8 @@ import {
   emojiGuidanceFor, retrieveRelevantMemories, temperatureFor,
 } from "../_shared/brain.ts";
 import { embedOne } from "../_shared/embed.ts";
+import { detectAction, runAction } from "../_shared/nl-actions.ts";
+import { extractAndStore } from "../_shared/passive-memory.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
