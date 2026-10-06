@@ -11,6 +11,8 @@ import {
   emojiGuidanceFor, retrieveRelevantMemories, temperatureFor,
 } from "../_shared/brain.ts";
 import { embedOne } from "../_shared/embed.ts";
+import { detectAction, runAction } from "../_shared/nl-actions.ts";
+import { extractAndStore } from "../_shared/passive-memory.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
@@ -25,6 +27,10 @@ const SURFACE_NOTES = `**You are talking through Telegram**
 - Plain text only. No markdown headers, no tables, no code fences unless sharing actual code.
 - Keep replies chat-sized: a few sentences. Long essays don't belong in a messaging thread.
 - Bullets are fine sparingly, using "•".`;
+
+const GREETING = (first?: string) =>
+  `Hey${first ? ` ${first}` : ""} — I'm Aurora. No commands here, just talk to me like you would a person. ` +
+  `Tell me what's going on and I'll remember what matters.`;
 
 function admin() {
   return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
