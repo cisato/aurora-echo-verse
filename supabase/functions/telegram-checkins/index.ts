@@ -67,6 +67,8 @@ async function draft(note: string, name?: string): Promise<string | null> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const body = await req.json().catch(() => ({}));
+  if (body?.mode === "due") return await sendDue(supabase);
 
   const { data: users } = await supabase
     .from("user_settings")
@@ -125,3 +127,58 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
+
+/** Deliver reminders and follow-ups whose time has come. Bounded per run. */
+async function sendDue(supabase: Any): Promise<Response> {
+  const { data: due } = await supabase.from("scheduled_messages")
+    .select("id, user_id, kind, body, attempts, send_at")
+    .eq("status", "pending").lte("send_at", new Date().toISOString())
+    .order("send_at").limit(25);
+  let sent = 0;
+  for (const m of (due ?? []) as Any[]) {
+    // Claim the row first so overlapping runs never double-send.
+    const { data: claimed } = await supabase.from("scheduled_messages")
+      .update({ attempts: m.attempts + 1 }).eq("id", m.id).eq("attempts", m.attempts).eq("status", "pending").select("id");
+    if (!claimed?.length) continue;
+    const finish = (status: string, msg?: string) => supabase.from("scheduled_messages")
+      .update({ status, sent_message: msg ?? null, sent_at: status === "sent" ? new Date().toISOString() : null }).eq("id", m.id);
+    try {
+      const { data: link } = await supabase.from("bot_channel_links")
+        .select("external_id, display_name").eq("user_id", m.user_id).eq("platform", "telegram").maybeSingle();
+      const { data: s } = await supabase.from("user_settings")
+        .select("telegram_enabled, telegram_checkins_enabled, telegram_checkin_max_per_day, telegram_checkin_quiet_start, telegram_checkin_quiet_end")
+        .eq("user_id", m.user_id).maybeSingle();
+      if (!link?.external_id || s?.telegram_enabled === false) { await finish("skipped"); continue; }
+
+      let text: string | null;
+      if (m.kind === "reminder") {
+        text = `Reminder: ${m.body.charAt(0).toUpperCase()}${m.body.slice(1)}`;
+      } else {
+        if (!s?.telegram_checkins_enabled) { await finish("skipped"); continue; }
+        const { data: rp } = await supabase.from("ritual_preferences").select("timezone").eq("user_id", m.user_id).maybeSingle();
+        if (inQuiet(hourIn(rp?.timezone || "Africa/Lagos"), s.telegram_checkin_quiet_start ?? 21, s.telegram_checkin_quiet_end ?? 8)) {
+          // Push to the end of quiet hours instead of dropping it.
+          await supabase.from("scheduled_messages").update({ send_at: new Date(Date.now() + 3600e3).toISOString() }).eq("id", m.id);
+          continue;
+        }
+        const since = new Date(Date.now() - 86400e3).toISOString();
+        const { count } = await supabase.from("proactive_checkins").select("id", { count: "exact", head: true }).eq("user_id", m.user_id).gte("created_at", since);
+        if ((count ?? 0) >= (s.telegram_checkin_max_per_day ?? 2)) { await finish("skipped"); continue; }
+        text = await draft(`(upcoming event they told you about, which should now be over — ask how it went) ${m.body}`, link.display_name ?? undefined);
+        if (!text) { await finish("skipped"); continue; }
+      }
+      const ok = await sendMessage(link.external_id, text);
+      if (m.kind === "followup") {
+        await supabase.from("proactive_checkins").insert({ user_id: m.user_id, platform: "telegram", topic_key: `followup:${m.body}`.slice(0, 120), message: text });
+      }
+      await finish(ok === false ? "failed" : "sent", text);
+      sent++;
+    } catch (e) {
+      console.error("scheduled send failed", m.id, e);
+      await finish(m.attempts + 1 >= 3 ? "failed" : "pending");
+    }
+  }
+  return new Response(JSON.stringify({ ok: true, due: due?.length ?? 0, sent }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
