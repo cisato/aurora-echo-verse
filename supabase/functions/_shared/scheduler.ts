@@ -2,8 +2,32 @@
 // and dated events worth a gentle follow-up afterwards. Writes real rows to
 // scheduled_messages so Aurora only ever says "I'll remind you" when a row exists.
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash-lite";
+const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
+const MODEL = "openai/gpt-6-astra";
+
+const SCHEMA = {
+  type: "object", additionalProperties: false, required: ["reminder", "followup"],
+  properties: {
+    reminder: { type: ["object", "null"], additionalProperties: false, required: ["at", "text"], properties: { at: { type: "string" }, text: { type: "string" } } },
+    followup: { type: ["object", "null"], additionalProperties: false, required: ["at", "about"], properties: { at: { type: "string" }, about: { type: "string" } } },
+  },
+};
+
+async function streamText(res: Response): Promise<string> {
+  let text = "", buf = "";
+  const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += value;
+    const lines = buf.split("\n"); buf = lines.pop() ?? "";
+    for (const l of lines) {
+      if (!l.startsWith("data:")) continue;
+      try { const e = JSON.parse(l.slice(5)); if (e.type === "response.output_text.delta") text += e.delta; } catch { /* skip */ }
+    }
+  }
+  return text;
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
@@ -32,15 +56,15 @@ Read one message and return ONLY JSON: {"reminder":null|{"at":"ISO-8601 UTC","te
   try {
     const res = await fetch(GATEWAY, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${key}`, "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch", "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
-        messages: [{ role: "system", content: system }, { role: "user", content: text.slice(0, 2000) }],
-        temperature: 0,
+        model: MODEL, stream: true, store: false, reasoning: { effort: "low" },
+        instructions: system, input: text.slice(0, 2000),
+        text: { format: { type: "json_schema", name: "timed", strict: true, schema: SCHEMA } },
       }),
     });
-    if (!res.ok) { console.error("timed detect failed", res.status); return {}; }
-    const raw = (await res.json())?.choices?.[0]?.message?.content ?? "";
+    if (!res.ok || !res.body) { console.error("timed detect failed", res.status); return {}; }
+    const raw = await streamText(res);
     const m = raw.match(/\{[\s\S]*\}/);
     if (!m) return {};
     const p = JSON.parse(m[0]);
