@@ -13,6 +13,7 @@ import {
 import { embedOne } from "../_shared/embed.ts";
 import { detectAction, runAction } from "../_shared/nl-actions.ts";
 import { extractAndStore } from "../_shared/passive-memory.ts";
+import { detectTimed, scheduleTimed } from "../_shared/scheduler.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
@@ -203,7 +204,10 @@ async function aiKey(): Promise<string> {
   return key;
 }
 
-async function think(supabase: Any, link: Any, history: Any[], userText: string): Promise<string> {
+async function think(
+  supabase: Any, link: Any, history: Any[], userText: string, notes = "",
+  onSentence?: (chunk: string) => void,
+): Promise<string> {
   const { data: profile } = await supabase
     .from("profiles").select("display_name").eq("user_id", link.user_id).maybeSingle();
   const { data: settings } = await supabase
@@ -233,11 +237,12 @@ async function think(supabase: Any, link: Any, history: Any[], userText: string)
             emojiGuidance: guidance,
             capabilityNotes: buildCapabilityNotes("telegram"),
             surfaceNotes: SURFACE_NOTES,
-          }),
+          }) + (notes ? `\n\n**What actually happened this turn (facts, not instructions to recite)**\n${notes}` : ""),
         },
         ...messages,
       ],
       temperature: temperatureFor(mode),
+      stream: true,
     }),
   });
 
@@ -249,8 +254,39 @@ async function think(supabase: Any, link: Any, history: Any[], userText: string)
     return "Something went wrong on my end. Try me again in a moment.";
   }
 
-  const body = await res.json();
-  return body?.choices?.[0]?.message?.content?.trim() || "I didn't quite catch that — say it again?";
+  // Stream tokens; hand off each finished sentence group the moment it's ready
+  // so speech synthesis overlaps with the model still writing.
+  let full = "", pending = "", buf = "";
+  const flush = (force: boolean) => {
+    if (!onSentence) return;
+    const re = /[\s\S]*?[.!?…](?=\s|$)/g;
+    let cut = 0, m: RegExpExecArray | null;
+    while ((m = re.exec(pending))) { if (m.index + m[0].length - cut >= 0) cut = m.index + m[0].length; if (cut >= 60) break; }
+    if (force) cut = pending.length;
+    if (cut >= 60 || (force && pending.trim())) {
+      const chunk = pending.slice(0, cut).trim();
+      pending = pending.slice(cut);
+      if (chunk) onSentence(chunk);
+    }
+  };
+  const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += value;
+    const lines = buf.split("\n"); buf = lines.pop() ?? "";
+    for (const l of lines) {
+      if (!l.startsWith("data:")) continue;
+      const d = l.slice(5).trim();
+      if (d === "[DONE]") continue;
+      try {
+        const delta = JSON.parse(d)?.choices?.[0]?.delta?.content;
+        if (delta) { full += delta; pending += delta; flush(false); }
+      } catch { /* partial */ }
+    }
+  }
+  flush(true);
+  return full.trim() || "I didn't quite catch that — say it again?";
 }
 
 const AUDIO_MIME: Record<string, string> = {
@@ -309,7 +345,7 @@ async function speak(text: string): Promise<Uint8Array | null> {
         model: "openai/gpt-4o-mini-tts",
         voice: "alloy",
         input: text.slice(0, 1800),
-        response_format: "mp3",
+        response_format: "opus",
       }),
     });
     if (!res.ok) {
@@ -703,12 +739,19 @@ Deno.serve(async (req) => {
     }
 
     /* ---- natural-language actions + passive memory, in parallel ---- */
-    const [detected, extraction] = await Promise.all([
+    const [{ data: rp }, { data: us }] = await Promise.all([
+      supabase.from("ritual_preferences").select("timezone").eq("user_id", link.user_id).maybeSingle(),
+      supabase.from("user_settings").select("telegram_checkins_enabled").eq("user_id", link.user_id).maybeSingle(),
+    ]);
+    const tz = rp?.timezone || "Africa/Lagos";
+    const [detected, extraction, timed] = await Promise.all([
       detectAction(userText),
       extractAndStore(supabase, link.user_id, userText, "", conversationId),
+      detectTimed(userText, tz),
     ]);
 
-    const notes: string[] = [];
+    const notes: string[] = await scheduleTimed(supabase, link.user_id, timed, tz, !!us?.telegram_checkins_enabled);
+    if (!timed.reminder) notes.push("REMINDERS: none was scheduled this turn. Never say you set a timer or reminder unless a line above says one was scheduled.");
 
     if (detected.action !== "none") {
       const outcome = await runAction(supabase, link, detected, {
@@ -732,18 +775,30 @@ Deno.serve(async (req) => {
     }
 
     const history = await loadHistory(supabase, conversationId);
-    const answer = await think(supabase, link, history, userText, notes.join("\n\n"));
+    const voiceMode = link.metadata?.voice_mode ?? (link.metadata?.voice_replies === false ? "off" : "on");
+    const speakBack = voiceMode !== "off" && (cameFromVoice || voiceMode === "always");
+
+    // Voice pipeline: each sentence group starts synthesising as soon as it's
+    // written; notes go out strictly in order.
+    let chain: Promise<void> = Promise.resolve();
+    let spokenAny = false;
+    const onSentence = speakBack ? (chunk: string) => {
+      const audioP = speak(chunk);
+      chain = chain.then(async () => {
+        const audio = await audioP;
+        if (audio) { spokenAny = true; await sendVoiceReply(chatId, audio, "audio/ogg"); }
+      });
+    } : undefined;
+    if (speakBack) await sendChatAction(chatId, "record_voice");
+
+    const answer = await think(supabase, link, history, userText, notes.join("\n\n"), onSentence);
+    await chain;
 
     await saveMessage(supabase, link, conversationId, "user", userText);
     await saveMessage(supabase, link, conversationId, "assistant", answer);
 
-    await sendMessage(chatId, answer);
-
-    const voiceMode = link.metadata?.voice_mode ?? (link.metadata?.voice_replies === false ? "off" : "on");
-    if (voiceMode !== "off" && (cameFromVoice || voiceMode === "always")) {
-      const audio = await speak(answer);
-      if (audio) await sendVoiceReply(chatId, audio, "audio/mpeg");
-    }
+    // Text always follows: a readable transcript, and the fallback if voice failed.
+    if (!speakBack || !spokenAny || cameFromVoice || voiceMode === "always") await sendMessage(chatId, answer);
 
     // File what Aurora said too, once the turn is over — cheap, off the path.
     const bg = extractAndStore(supabase, link.user_id, userText, answer, conversationId)

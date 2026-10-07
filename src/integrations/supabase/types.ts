@@ -677,6 +677,45 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_messages: {
+        Row: {
+          attempts: number
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          send_at: string
+          sent_at: string | null
+          sent_message: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          body: string
+          created_at?: string
+          id?: string
+          kind: string
+          send_at: string
+          sent_at?: string | null
+          sent_message?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          send_at?: string
+          sent_at?: string | null
+          sent_message?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           amount_kobo: number | null
