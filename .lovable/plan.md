@@ -1,78 +1,51 @@
-# Aurora Evolution — Sequenced Plan
+# Aurora Web Intelligence Layer
 
-Executed one phase per turn. You approve each phase before I move to the next. Existing working functionality is preserved unless a step explicitly replaces it.
+## What exists today
+- Chat (web) and Telegram both call the AI gateway directly; neither can use tools. The shared rules in `brain.ts` tell Aurora she has **no** live internet.
+- `scheduler.ts` + `telegram-checkins` already run once a minute for reminders/follow-ups (`scheduled_messages`). This becomes the base for monitoring.
+- `user_settings.timezone` exists (default UTC); Telegram uses it, web chat uses server time without a zone.
+- No `external-tools.ts` and no web-search provider are connected.
 
----
+## Dependency to settle first
+Live web **search** needs a search provider. The plan uses the **Firecrawl** connector (search + page reading, key stays on the server). Page fetching, JSON/CSV/XML APIs and time tools work without it. If Firecrawl is not connected, `web_search` returns an honest "search unavailable" error rather than fake results.
 
-## Phase 1 — UI/UX + Chat Polish  *(starting now)*
+## What gets built
 
-**Design system refresh (`src/index.css`, `tailwind.config.ts`)**
-- Keep cream-on-forest base; add layered tokens: `--ivory`, `--sage`, `--gold`, `--charcoal`, `--surface-raised`, `--surface-sunken`.
-- Softer shadows (`--shadow-paper`, `--shadow-lift`), larger radius scale, generous spacing rhythm.
-- Verify light/dark parity — dark theme uses warm charcoal, not pure black.
-- Type scale tuned for reading: Fraunces display, Inter Tight body, comfortable line-height.
+### 1. Tool layer (`supabase/functions/_shared/tools/`)
+Modular registry; each tool returns the same envelope:
+`{ success, status, error_category, data, source, url, retrieved_at, content_type, stale, truncated, metadata }`
+- `web_search` (Firecrawl), `web_fetch` (GET + readable-text extraction from HTML, follow links), `http_request` (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS, query, headers, JSON/form/multipart bodies, pagination up to a cap), `parse_data` (JSON path, CSV rows, XML), `calculate` (safe arithmetic on retrieved numbers), `get_current_time` / `resolve_time` (timezone-aware, relative phrases), `schedule_task`, `monitor_url`, `list_monitors` / `stop_monitor`.
+- Named-credential support: `http_request` may reference a stored secret by name (e.g. `auth: "SOME_API_KEY"`) from an allowlist; values never reach the model or logs.
 
-**Chat surface (`ChatWindow`, `ChatMessage`, `Messages`, `ChatInput`)**
-- Assistant text renders directly on canvas (no bubble), user bubbles get refined forest→sage gradient with gold hairline.
-- Timestamps become natural ("just now", "2m ago") and appear on hover.
-- Message actions: Copy, Edit (user only), Bookmark, Regenerate (assistant only) — icon row on hover.
-- Better markdown: refined code blocks with language chip + copy, blockquote styling, list rhythm.
-- Loading state: replace three-dot pulse with a single breathing shimmer line ("Aurora is thinking…" removed on stream start).
-- Smooth auto-scroll only when user is near bottom.
+### 2. Safe outbound fetch (`safeFetch.ts`)
+- https/http only, no credentials in URLs, DNS-resolve and block private/loopback/link-local/metadata ranges (IPv4+IPv6), re-check on every redirect (manual redirects, max 5).
+- Timeouts (10s default, 25s max), 2 retries with exponential backoff + jitter on 429/5xx/network only, honours `Retry-After`, 2 MB body cap, per-domain circuit breaker, per-user rate limit (e.g. 60 tool calls / 10 min), concurrency cap of 4.
+- Errors classified: `timeout | dns | blocked | http_4xx | http_5xx | rate_limited | too_large | parse | empty | network`.
 
-**Empty state & composer**
-- Empty canvas: quiet greeting + 3 contextual suggestion cards (not 6), pulled from time-of-day + recent memories.
-- Composer: single rounded surface, mic + send only, subtle focus ring, keyboard shortcuts hint.
+### 3. Agent loop (`agent.ts`)
+- Responses API with function tools (`openai/gpt-6-astra`), up to 6 tool rounds, streamed.
+- System prompt gets an authoritative server clock (UTC + user zone + weekday) every turn and rules: use tools for anything current, cite source + retrieval time, label claims as *known / retrieved / calculated*, never present a failed tool as success.
+- Wired into web `chat` (streams text back in the existing format, plus a sources block) and `telegram-webhook`.
+- `brain.ts` capability notes updated: live web and API access are real now; still no phone calls, no purchases.
 
-**Out of scope this phase:** memory features, security, new AI behaviors.
+### 4. Monitoring + scheduling
+- `web_monitors` table: url, selector/json path, frequency (cron-like: hourly/daily at HH:MM/weekly), last hash + extracted value, next_run_at, status, failure count (auto-pause after 5 failures).
+- Existing minute-by-minute job also runs due monitors, compares with the previous snapshot, and notifies on Telegram only when something changed.
+- Recurring reminders ("every Monday") added to `scheduled_messages` via an `rrule`-style field.
 
----
+### 5. Storage, retention, logs
+- `tool_executions` (tool, method, domain, status, ms, retries, bytes, error category, user) — no headers, bodies or secrets. 30-day cleanup.
+- `web_cache` (url hash, extracted text, retrieved_at, expires_at) — 1-hour default TTL, 7-day purge.
+- `monitor_snapshots` — keep last 20 per monitor.
+- All tables RLS: users read their own rows; only the backend writes.
+- Web chat sends the browser's timezone so `user_settings.timezone` is set automatically.
 
-## Phase 2 — Security & Trust Hardening
-- Flip `verify_jwt = true` on user-context functions (`chat`, `memory-extract`, `emotion-analyze`, `proactive-insights`, `daily-summary`, `send-report-email`, `multimodal`, `transcribe`). Derive `userId` from `getClaims()`, stop trusting request-body IDs.
-- Keep `verify_jwt = false` only for `paystack-webhook` (signature-verified) and `aurora-api` (API-key-verified).
-- Reconcile pricing: single source in DB / shared constant, remove hardcoded 9500 vs 4500 drift.
-- Audit localStorage: move anything sensitive (voice settings are fine; nothing user-identifying should live there).
-- Add rate limits on `chat` and `transcribe`.
+### 6. Tests
+Deno tests for the URL guard (private IPs, metadata, redirects to internal), time parsing, envelope/error classification; plus live checks via the deployed function: real page fetch, JSON GET, POST/PUT/DELETE to httpbin, 404/500, timeout (httpbin delay), redirect, 429, large response, CSV/XML parse, bearer-auth endpoint (httpbin `/bearer`), a live search, and a full chat turn on web and Telegram asking a current-events + calculation question. Then a monitor created and run once by the scheduler.
 
-## Phase 3 — Human Conversation Engine  *(complete)*
-- Rewrote `chat` system prompt: contractions, variable rhythm, no "Great question", no meta-talk, honest continuity, presence over performance.
-- Emoji intelligence: server measures user emoji ratio across the conversation and instructs Aurora to mirror lightly, moderately, or heavily — or not at all.
-- Sensitive-topic guardrail: when the last user message contains grief / crisis / mental-health markers, emoji use is suppressed regardless of ratio.
-- Response shaping baked into the prompt: short questions get short answers, no forced summaries, no bullets by default.
+## Out of scope / limitations
+- No headless browser (JavaScript-only sites may extract poorly; Firecrawl helps).
+- OAuth integrations: architecture supports named credentials; individual OAuth providers are added per service via connectors.
+- No phone calls; no payments or purchases on the user's behalf.
 
-## Phase 4 — Memory Intelligence  *(retrieval index shipped)*
-- **Structured extraction:** memory-extract now emits `tags` per fact (lowercase, dashed) alongside category/key/value/confidence/source.
-- **Per-user retrieval index:** `user_memory.embedding vector(1536)` + HNSW cosine index; embeddings via `openai/text-embedding-3-small` through the AI Gateway.
-- **Live retrieval:** every chat turn embeds the latest user message and injects the top semantically-relevant memories into the system prompt (sensitive memories excluded).
-- **`memory-search` edge function** + `useMemorySystem.searchMemory()` for UI-driven semantic lookup.
-- Still open for later phases: Memory Repair UI, Private Vault unlock flow, AI Receipts chips, Memory Map graph view.
-
-## Phase 5 — Companion Growth
-- Relationship Timeline (visible history of milestones, not scores).
-- Reflection Engine (weekly quiet prompt, opt-in).
-- Decision Journal + Contradiction Detector (surfaces gently, never judgmental).
-- Silent Pattern Discovery feeds Proactive Insights.
-
-## Phase 6 — Companion Behaviors
-- Curiosity Mode, Thinking Styles, Context Lens as sidebar toggles.
-- Confidence Meter on answers (subtle).
-- AI Undo (session-scoped, 5-minute window).
-- Multi-version answers generated in background, revealed via "show another take".
-
-## Phase 7 — Life Spaces
-- Extend `conversations` with `space_id`; new `spaces` table with own memory/goals/settings.
-- Space switcher in sidebar; memory retrieval scoped per space.
-
-## Phase 8 — Honesty Pass
-- Search / Weather / Code pages: either wire real providers (SerpAPI / OpenWeather / sandboxed exec) or replace with honest "coming soon" state. No fabricated results.
-
----
-
-## Execution rules
-- One phase per turn. I ship, you review, you approve next.
-- No new duplicate systems — refactor existing files.
-- Every change keeps the app running; no half-migrated states left between turns.
-- After each phase I run typecheck and a quick Playwright smoke on the affected screens.
-
-**Approve to start Phase 1, or tell me to reorder.**
+Final report will cover all 12 sections you asked for.
