@@ -410,6 +410,50 @@ export type Database = {
           },
         ]
       }
+      monitor_snapshots: {
+        Row: {
+          changed: boolean
+          content_hash: string | null
+          error: string | null
+          http_status: number | null
+          id: string
+          monitor_id: string
+          retrieved_at: string
+          user_id: string
+          value: string | null
+        }
+        Insert: {
+          changed?: boolean
+          content_hash?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          monitor_id: string
+          retrieved_at?: string
+          user_id: string
+          value?: string | null
+        }
+        Update: {
+          changed?: boolean
+          content_hash?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          monitor_id?: string
+          retrieved_at?: string
+          user_id?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitor_snapshots_monitor_id_fkey"
+            columns: ["monitor_id"]
+            isOneToOne: false
+            referencedRelation: "web_monitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_transactions: {
         Row: {
           amount_kobo: number
@@ -684,6 +728,7 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          recurrence: string | null
           send_at: string
           sent_at: string | null
           sent_message: string | null
@@ -696,6 +741,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind: string
+          recurrence?: string | null
           send_at: string
           sent_at?: string | null
           sent_message?: string | null
@@ -708,6 +754,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          recurrence?: string | null
           send_at?: string
           sent_at?: string | null
           sent_message?: string | null
@@ -779,6 +826,51 @@ export type Database = {
         Update: {
           created_at?: string
           update_id?: number
+        }
+        Relationships: []
+      }
+      tool_executions: {
+        Row: {
+          bytes: number | null
+          created_at: string
+          domain: string | null
+          duration_ms: number | null
+          error_category: string | null
+          http_status: number | null
+          id: string
+          method: string | null
+          retries: number
+          success: boolean
+          tool: string
+          user_id: string | null
+        }
+        Insert: {
+          bytes?: number | null
+          created_at?: string
+          domain?: string | null
+          duration_ms?: number | null
+          error_category?: string | null
+          http_status?: number | null
+          id?: string
+          method?: string | null
+          retries?: number
+          success: boolean
+          tool: string
+          user_id?: string | null
+        }
+        Update: {
+          bytes?: number | null
+          created_at?: string
+          domain?: string | null
+          duration_ms?: number | null
+          error_category?: string | null
+          http_status?: number | null
+          id?: string
+          method?: string | null
+          retries?: number
+          success?: boolean
+          tool?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -917,6 +1009,87 @@ export type Database = {
         }
         Relationships: []
       }
+      web_cache: {
+        Row: {
+          content: string
+          content_type: string | null
+          expires_at: string
+          retrieved_at: string
+          url: string
+          url_hash: string
+        }
+        Insert: {
+          content: string
+          content_type?: string | null
+          expires_at: string
+          retrieved_at?: string
+          url: string
+          url_hash: string
+        }
+        Update: {
+          content?: string
+          content_type?: string | null
+          expires_at?: string
+          retrieved_at?: string
+          url?: string
+          url_hash?: string
+        }
+        Relationships: []
+      }
+      web_monitors: {
+        Row: {
+          created_at: string
+          failure_count: number
+          frequency: string
+          id: string
+          json_path: string | null
+          label: string
+          last_checked_at: string | null
+          last_hash: string | null
+          last_value: string | null
+          local_time: string | null
+          next_run_at: string
+          status: string
+          url: string
+          user_id: string
+          watch_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          failure_count?: number
+          frequency?: string
+          id?: string
+          json_path?: string | null
+          label: string
+          last_checked_at?: string | null
+          last_hash?: string | null
+          last_value?: string | null
+          local_time?: string | null
+          next_run_at?: string
+          status?: string
+          url: string
+          user_id: string
+          watch_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          failure_count?: number
+          frequency?: string
+          id?: string
+          json_path?: string | null
+          label?: string
+          last_checked_at?: string | null
+          last_hash?: string | null
+          last_value?: string | null
+          local_time?: string | null
+          next_run_at?: string
+          status?: string
+          url?: string
+          user_id?: string
+          watch_text?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -956,6 +1129,7 @@ export type Database = {
         Args: { _from: string; _to: string }
         Returns: undefined
       }
+      purge_web_intelligence: { Args: never; Returns: undefined }
       user_id_by_email: { Args: { _email: string }; Returns: string }
     }
     Enums: {
