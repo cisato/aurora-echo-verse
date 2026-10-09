@@ -6,8 +6,8 @@ import { currentTime } from "./time.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
+const MODEL = "openai/gpt-6-astra";
 const MAX_ROUNDS = 6;
 
 export function clockBlock(tz: string): string {
@@ -31,32 +31,42 @@ export async function research(history: Any[], userText: string, ctx: ToolCtx): 
   const key = Deno.env.get("LOVABLE_API_KEY");
   const empty = { notes: "", sources: [], used: false };
   if (!key || !userText.trim()) return empty;
-  const msgs: Any[] = [{ role: "system", content: SYSTEM(ctx.tz) }, ...history.slice(-6), { role: "user", content: userText }];
+  const input: Any[] = [...history.slice(-6).map((m: Any) => ({ role: m.role, content: String(m.content) })), { role: "user", content: userText }];
+  const tools = TOOL_DEFS.map((t) => ({ type: "function", name: t.name, description: t.description, parameters: t.parameters, strict: false }));
   const log: string[] = []; const sources: ResearchResult["sources"] = [];
   let used = false, summary = "";
   for (let round = 0; round < MAX_ROUNDS; round++) {
     const res = await fetch(GATEWAY, {
-      method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: MODEL, messages: msgs, tools: TOOL_DEFS.map((t) => ({ type: "function", function: t })), tool_choice: "auto", temperature: 0.1 }),
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch", "Content-Type": "application/json" },
+      body: JSON.stringify({ model: MODEL, stream: true, store: false, reasoning: { effort: "low" }, include: ["reasoning.encrypted_content"],
+        instructions: SYSTEM(ctx.tz), input, tools, tool_choice: "auto" }),
     });
-    if (!res.ok) { console.error("research gateway", res.status, (await res.text()).slice(0, 200)); break; }
-    const j = await res.json(); const msg = j?.choices?.[0]?.message;
-    if (!msg) break;
-    const calls = msg.tool_calls || [];
-    if (!calls.length) { summary = String(msg.content || "").trim(); break; }
+    if (!res.ok || !res.body) { console.error("research gateway", res.status, (await res.text()).slice(0, 200)); break; }
+    const items: Any[] = []; let text = "", buf = "";
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += value; const lines = buf.split("\n"); buf = lines.pop() ?? "";
+      for (const l of lines) {
+        if (!l.startsWith("data:")) continue;
+        try { const e = JSON.parse(l.slice(5)); if (e.type === "response.output_text.delta") text += e.delta; else if (e.type === "response.output_item.done") items.push(e.item); } catch { /* */ }
+      }
+    }
+    const calls = items.filter((i) => i.type === "function_call");
+    if (!calls.length) { summary = text.trim(); break; }
     used = true;
-    msgs.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });
-    const outs = await Promise.all(calls.slice(0, 4).map(async (c: Any) => {
-      let args: Any = {}; try { args = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
-      const out: Envelope = await runTool(c.function?.name, args, ctx);
-      log.push(`${c.function?.name}(${JSON.stringify(args).slice(0, 160)}) → ${out.success ? "OK" : `FAILED [${out.error_category}] ${out.error}`}${out.url ? ` ${out.url}` : ""} @ ${out.retrieved_at}${out.stale ? " (cached)" : ""}${out.truncated ? " (truncated)" : ""}`);
+    input.push(...items.filter((i) => i.type === "reasoning" || i.type === "function_call"));
+    const outs = await Promise.all(calls.map(async (c: Any, idx: number) => {
+      if (idx >= 4) return { type: "function_call_output", call_id: c.call_id, output: JSON.stringify({ success: false, error: "skipped: max 4 parallel calls" }) };
+      let args: Any = {}; try { args = JSON.parse(c.arguments || "{}"); } catch { /* */ }
+      const out: Envelope = await runTool(c.name, args, ctx);
+      log.push(`${c.name}(${JSON.stringify(args).slice(0, 160)}) → ${out.success ? "OK" : `FAILED [${out.error_category}] ${out.error}`}${out.url ? ` ${out.url}` : ""} @ ${out.retrieved_at}${out.stale ? " (cached)" : ""}${out.truncated ? " (truncated)" : ""}`);
       if (out.success && out.url) sources.push({ title: (out.data as Any)?.title, url: out.url, retrieved_at: out.retrieved_at });
-      if (out.success && c.function?.name === "web_search") for (const r of ((out.data as Any[]) || []).slice(0, 3)) sources.push({ title: r.title, url: r.url, retrieved_at: out.retrieved_at });
-      return { role: "tool", tool_call_id: c.id, content: JSON.stringify(out).slice(0, 12000) };
+      if (out.success && c.name === "web_search") for (const r of ((out.data as Any[]) || []).slice(0, 3)) sources.push({ title: r.title, url: r.url, retrieved_at: out.retrieved_at });
+      return { type: "function_call_output", call_id: c.call_id, output: JSON.stringify(out).slice(0, 12000) };
     }));
-    // Any calls past the concurrency cap get an explicit refusal so the transcript stays valid.
-    for (const c of calls.slice(4)) outs.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify({ success: false, error: "skipped: max 4 parallel calls" }) });
-    msgs.push(...outs);
+    input.push(...outs);
   }
   if (!used || /^NONE\.?$/i.test(summary)) return empty;
   const notes = `LIVE TOOLS: these tools really ran this turn. Base current facts ONLY on the successful results below; for failures say plainly what couldn't be retrieved. Cite the source site and say when it was retrieved for anything time-sensitive. Label things as retrieved, calculated, or from your own knowledge.
