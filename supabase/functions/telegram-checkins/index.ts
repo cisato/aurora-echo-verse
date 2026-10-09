@@ -5,6 +5,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/auth.ts";
 import { sendMessage } from "../_shared/telegram.ts";
+import { runDueMonitors } from "../_shared/tools/monitors.ts";
+import { nextOccurrence } from "../_shared/tools/time.ts";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
 const TOPIC_COOLDOWN_DAYS = 4;
@@ -131,7 +133,7 @@ Deno.serve(async (req) => {
 /** Deliver reminders and follow-ups whose time has come. Bounded per run. */
 async function sendDue(supabase: Any): Promise<Response> {
   const { data: due } = await supabase.from("scheduled_messages")
-    .select("id, user_id, kind, body, attempts, send_at")
+    .select("id, user_id, kind, body, attempts, send_at, recurrence")
     .eq("status", "pending").lte("send_at", new Date().toISOString())
     .order("send_at").limit(25);
   let sent = 0;
@@ -173,12 +175,22 @@ async function sendDue(supabase: Any): Promise<Response> {
       }
       await finish(ok === false ? "failed" : "sent", text);
       sent++;
+      if (m.recurrence) {
+        const { data: rp2 } = await supabase.from("ritual_preferences").select("timezone").eq("user_id", m.user_id).maybeSingle();
+        const nx = nextOccurrence(m.recurrence, rp2?.timezone || "Africa/Lagos", new Date(Date.now() + 60e3));
+        if (nx) await supabase.from("scheduled_messages").insert({ user_id: m.user_id, kind: m.kind, send_at: nx.toISOString(), body: m.body, recurrence: m.recurrence });
+      }
     } catch (e) {
       console.error("scheduled send failed", m.id, e);
       await finish(m.attempts + 1 >= 3 ? "failed" : "pending");
     }
   }
-  return new Response(JSON.stringify({ ok: true, due: due?.length ?? 0, sent }), {
+  const monitors = await runDueMonitors(supabase, async (userId, text) => {
+    const { data: link } = await supabase.from("bot_channel_links").select("external_id").eq("user_id", userId).eq("platform", "telegram").maybeSingle();
+    if (!link?.external_id) return false;
+    return (await sendMessage(link.external_id, text)) !== false;
+  }).catch((e) => { console.error("monitors failed", e); return { checked: 0, changed: 0 }; });
+  return new Response(JSON.stringify({ ok: true, due: due?.length ?? 0, sent, monitors }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
