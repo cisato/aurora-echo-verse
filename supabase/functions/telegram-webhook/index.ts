@@ -14,6 +14,7 @@ import { embedOne } from "../_shared/embed.ts";
 import { detectAction, runAction } from "../_shared/nl-actions.ts";
 import { extractAndStore } from "../_shared/passive-memory.ts";
 import { detectTimed, scheduleTimed } from "../_shared/scheduler.ts";
+import { research } from "../_shared/tools/agent.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
@@ -775,6 +776,13 @@ Deno.serve(async (req) => {
     }
 
     const history = await loadHistory(supabase, conversationId);
+    // Live tools: reminders already handled by the time detector above are not re-scheduled.
+    try {
+      await sendChatAction(chatId, "typing");
+      const r = await research(history, timed.reminder ? `${userText}\n\n(Note: the reminder in this message is already scheduled; do not call schedule_task.)` : userText,
+        { supabase, userId: link.user_id, tz });
+      if (r.used) notes.push(r.notes);
+    } catch (e) { console.error("research failed", e); notes.push("LIVE TOOLS: the lookup step crashed this turn. If they asked for live info, say you couldn't check right now."); }
     const voiceMode = link.metadata?.voice_mode ?? (link.metadata?.voice_replies === false ? "off" : "on");
     const speakBack = voiceMode !== "off" && (cameFromVoice || voiceMode === "always");
 
