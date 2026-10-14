@@ -15,6 +15,7 @@ import { detectAction, runAction } from "../_shared/nl-actions.ts";
 import { extractAndStore } from "../_shared/passive-memory.ts";
 import { detectTimed, scheduleTimed } from "../_shared/scheduler.ts";
 import { research } from "../_shared/tools/agent.ts";
+import { chatWithFallback } from "../_shared/llm.ts";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
@@ -223,41 +224,24 @@ async function think(
   const recalled = await retrieveRelevantMemories(link.user_id, supabase, lastUserText);
   if (recalled) context = `${context}\n\n${recalled}`;
 
-  const res = await fetch(`${GATEWAY}/chat/completions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${await aiKey()}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content: buildSystemPrompt({
-            userName: profile?.display_name || undefined,
-            cognitiveContext: context,
-            companionMode: mode,
-            emojiGuidance: guidance,
-            capabilityNotes: buildCapabilityNotes("telegram"),
-            surfaceNotes: SURFACE_NOTES,
-          }) + (notes ? `\n\n**What actually happened this turn (facts, not instructions to recite)**\n${notes}` : ""),
-        },
-        ...messages,
-      ],
-      temperature: temperatureFor(mode),
-      stream: true,
-    }),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text();
-    console.error(`AI gateway error [${res.status}]:`, detail.slice(0, 400));
-    if (res.status === 429) return "I'm getting a lot of requests right now — give me a minute and say that again.";
-    if (res.status === 402) return "My usage credits ran out. Top them up in Aurora and I'll be right back.";
-    return "Something went wrong on my end. Try me again in a moment.";
-  }
+  const chatMessages = [
+    {
+      role: "system",
+      content: buildSystemPrompt({
+        userName: profile?.display_name || undefined,
+        cognitiveContext: context,
+        companionMode: mode,
+        emojiGuidance: guidance,
+        capabilityNotes: buildCapabilityNotes("telegram"),
+        surfaceNotes: SURFACE_NOTES,
+      }) + (notes ? `\n\n**What actually happened this turn (facts, not instructions to recite)**\n${notes}` : ""),
+    },
+    ...messages,
+  ];
 
   // Stream tokens; hand off each finished sentence group the moment it's ready
   // so speech synthesis overlaps with the model still writing.
-  let full = "", pending = "", buf = "";
+  let pending = "";
   const flush = (force: boolean) => {
     if (!onSentence) return;
     const re = /[\s\S]*?[.!?…](?=\s|$)/g;
@@ -270,24 +254,18 @@ async function think(
       if (chunk) onSentence(chunk);
     }
   };
-  const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += value;
-    const lines = buf.split("\n"); buf = lines.pop() ?? "";
-    for (const l of lines) {
-      if (!l.startsWith("data:")) continue;
-      const d = l.slice(5).trim();
-      if (d === "[DONE]") continue;
-      try {
-        const delta = JSON.parse(d)?.choices?.[0]?.delta?.content;
-        if (delta) { full += delta; pending += delta; flush(false); }
-      } catch { /* partial */ }
-    }
-  }
+
+  const result = await chatWithFallback({
+    messages: chatMessages,
+    temperature: temperatureFor(mode),
+    onDelta: (d) => { pending += d; flush(false); },
+  });
   flush(true);
-  return full.trim() || "I didn't quite catch that — say it again?";
+  if (result.provider) console.log(`reply via ${result.provider}/${result.model}`);
+  if (!result.text.trim()) {
+    return "All of my thinking services are unavailable right now, so I can't answer properly. Give me a few minutes and try again.";
+  }
+  return result.text.trim();
 }
 
 const AUDIO_MIME: Record<string, string> = {
