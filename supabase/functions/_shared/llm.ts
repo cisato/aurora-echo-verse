@@ -11,12 +11,12 @@ interface Provider { name: string; url: string; key: string | undefined; models:
 function providers(): Provider[] {
   return [
     { name: "gemini", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-      key: Deno.env.get("GEMINI_API_KEY"), models: ["gemini-2.5-flash", "gemini-2.0-flash"] },
+      key: Deno.env.get("GEMINI_API_KEY"), models: ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"] },
     { name: "groq", url: "https://api.groq.com/openai/v1/chat/completions",
-      key: Deno.env.get("GROQ_API_KEY"), models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"] },
+      key: Deno.env.get("GROQ_API_KEY"), models: ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"] },
     { name: "openrouter", url: "https://openrouter.ai/api/v1/chat/completions",
       key: Deno.env.get("OPENROUTER_API_KEY"),
-      models: ["meta-llama/llama-3.3-70b-instruct:free", "deepseek/deepseek-chat-v3-0324:free", "google/gemma-3-27b-it:free", "openrouter/free"],
+      models: ["google/gemma-4-31b-it:free", "nvidia/nemotron-3-super-120b-a12b:free", "openrouter/free"],
       headers: { "HTTP-Referer": "https://aurora.app", "X-Title": "Aurora" } },
   ];
 }
